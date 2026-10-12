@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>CR.4 Daybuilder v1.3 — pilot</title>
+<title>CR.4 Daybuilder v1.4 — pilot</title>
 
 <!-- PWA: installeerbaar + offline (zie LEESMIJ.txt voor installatie) -->
 <link rel="manifest" href="manifest.json">
@@ -32,6 +32,17 @@
  6. v1.2 heeft nu wel een service worker (offline cache + installeer-
     baar), maar dat is geen pushmeldingen-infrastructuur — daarvoor
     is een server/push-service nodig.
+ 7. (v1.4) "Woordje vooraf": nu zelf in te vullen. In de app schrijft de
+    GA (Guardian Angel) dit woordje zelf; de gebruiker kan het aanpassen.
+ 8. (v1.4) "Link naar andere CR-module" uit de item-details gehaald —
+    bouwen in de app (modules die elkaar openen).
+ 9. (v1.4) "Capture the moment" is hier een kleine logboek-tijdlijn.
+    In de app: inspreken via de GA ("ik voel me net verdrietig") en een
+    aparte Logboek-module met weken/maanden, grafieken en suggesties.
+10. (v1.4) Dagstructuur: in de app laadt elke keuze (Gewone dag,
+    Weekend, ...) een voorgeprogrammeerd dagsjabloon.
+11. (v1.4) Slot: in de app duidelijker maken voor nieuwe gebruikers
+    (nu een stipje dat gloeit als het vergrendeld is).
 =====================================================================
 -->
 
@@ -278,6 +289,112 @@ nav.tabbar .tab.active{background:var(--panel);color:var(--ink);box-shadow:var(-
 
 footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 
+/* ===================== v1.4 ===================== */
+.iconBtn:disabled{opacity:.35;cursor:default}
+/* ?-icoontje + uitlegregel */
+.helpBtn{border:1px solid var(--line);background:var(--panel);color:var(--faint);width:13px;height:13px;border-radius:50%;font-size:8px;font-weight:800;line-height:1;padding:0;margin-left:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.helpText{display:none;font-size:10px;color:var(--muted);font-style:italic;margin:2px 0 3px}
+.helpText.open{display:block}
+.framingHead{font-size:10px;color:var(--muted);margin-bottom:2px;display:flex;align-items:center}
+.framingHead.big{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--faint);margin-top:4px}
+/* groene + exact gecentreerd (getekend i.p.v. een tekst-plus) */
+.addFab{position:relative;font-size:0}
+.addFab::before,.addFab::after{content:"";position:absolute;left:50%;top:50%;background:#fff;border-radius:1px;transform:translate(-50%,-50%)}
+.addFab::before{width:12px;height:2px}
+.addFab::after{width:2px;height:12px}
+/* item: vensterknoppen rechtsboven */
+.winCtrls{position:absolute;top:5px;right:6px;display:flex;gap:2px;z-index:2}
+.winBtn{border:0;background:transparent;width:18px;height:18px;padding:0;cursor:pointer;color:var(--faint);display:inline-flex;align-items:center;justify-content:center;border-radius:4px}
+.winBtn:hover{background:var(--line);color:var(--ink)}
+.winBtn:disabled{opacity:.3;cursor:default;background:transparent}
+.winBtn svg{display:block}
+.item .row1{padding-right:66px}
+.item.isMin .row1{padding-top:5px;padding-bottom:5px}
+.item.isMin .motifRow,.item.isMin .meta,.item.isMin .messageLine{display:none}
+.item.isMax .detail{display:block}
+.minTime{font-size:10px;color:var(--muted);flex:none}
+/* titelveld: onderstreept zolang leeg, weg tijdens typen */
+.item input.titleInput{border-bottom:1px solid transparent}
+.item input.titleInput:placeholder-shown{border-bottom:1px solid var(--faint)}
+.item input.titleInput:focus{border-bottom-color:transparent}
+.item input.titleInput::placeholder{color:var(--faint);font-weight:600}
+/* Dag/Moment-schakelaar */
+.dayToggle{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer}
+.dayToggle.on{border-color:var(--accent);color:var(--accent)}
+.dayToggle:disabled{opacity:.5;cursor:default}
+/* iconen: gecentreerd */
+.iconPick button{display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;font-size:13px}
+.iconPick .moreBtn{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1px}
+.item .detail textarea.noteArea{min-height:0;resize:vertical}
+.optHint::placeholder{color:var(--faint)}
+/* Live: intentie + dagdoel */
+.intentBox{text-align:center;margin:2px 0 10px}
+.intentText{font-size:13px;font-style:italic;color:var(--ink);line-height:1.4}
+.intentLbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);font-weight:800;margin-bottom:2px}
+.dagdoelBtn{border:0;background:transparent;font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);font-weight:800;cursor:pointer;margin-top:6px}
+.dagdoelBox{font-size:11px;color:var(--muted);margin-top:3px}
+.dagdoelBox b{color:var(--ink);font-weight:700}
+.allDayRow{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:8px}
+.allDayChip{font-size:10px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 8px;color:var(--muted)}
+.allDayChip.done{text-decoration:line-through;color:var(--faint)}
+.nowSide .nextMsg{display:block;font-size:10px;color:var(--accent);margin-top:2px}
+/* Kalender: twee kalenders, drie weergaven */
+.calViewSwitch{display:flex;gap:2px;background:var(--panel-alt);border:1px solid var(--line);border-radius:999px;padding:2px;margin-left:auto}
+.calViewSwitch button{border:0;background:transparent;border-radius:999px;font-size:9px;font-weight:800;color:var(--muted);padding:3px 7px;cursor:pointer}
+.calViewSwitch button.on{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.calGrid{display:grid;gap:6px}
+.calGrid.v-agenda{grid-template-columns:minmax(0,1fr) 30px}
+.calGrid.v-ess{grid-template-columns:30px minmax(0,1fr)}
+.calGrid.v-compact{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.calStrip{border:1px solid var(--line);background:var(--panel-alt);border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;min-height:120px}
+.calStrip .stripLbl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);font-weight:800;margin-top:4px}
+.calStrip .sdot{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.calStrip .sdot.on{background:var(--good)}
+.calColHead{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800;margin-bottom:4px}
+.essRow{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 2px;border-bottom:1px dashed var(--line);color:var(--ink)}
+.essRow .mk{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+.essRow .mk.on{background:var(--good);border-color:var(--good)}
+.essRow.done span.n{color:var(--muted)}
+.compactRow{font-size:10px;padding:4px 0;border-bottom:1px dashed var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compactRow .ct{color:var(--muted);margin-right:4px}
+.compactRow.done{color:var(--faint);text-decoration:line-through}
+.allDayCal{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+/* Punten: pool, weekkeuze, teller */
+.pointsHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.editLink{border:1px solid var(--line);background:var(--panel);border-radius:999px;font-size:10px;padding:2px 8px;color:var(--muted);cursor:pointer}
+.essCount{margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:999px;font-size:10px;font-weight:800;padding:2px 8px;cursor:pointer;color:var(--muted)}
+.essCount.on{border-color:var(--good);color:var(--good)}
+.essName small{color:var(--faint);font-size:10px}
+.pickRow{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.pickRow input{accent-color:var(--accent)}
+.pickInfo{font-size:11px;color:var(--muted);margin:4px 0 8px}
+.poolRow{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.poolRow button{margin-left:auto;border:0;background:transparent;color:var(--faint);font-size:13px;cursor:pointer}
+.poolAdd{display:flex;gap:6px;margin-top:8px}
+.poolAdd input{flex:1;border:1px solid var(--line);border-radius:6px;padding:6px 7px;font-size:12px}
+.poolAdd button,.primaryBtn{border:1px solid var(--accent);background:var(--panel);color:var(--accent);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer}
+.primaryBtn:disabled{opacity:.4;cursor:default}
+/* Capture the moment (logboek) */
+.ctmHead{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.ctmHead .cnt{font-size:10px;color:var(--faint)}
+.ctmBody{margin-top:8px}
+.ctmKinds{display:flex;gap:5px;flex-wrap:wrap}
+.ctmKind{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:5px}
+.ctmKind.on{border-color:var(--accent);background:var(--panel-alt);font-weight:700}
+.ctmDot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block}
+.ctmForm{margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel-alt)}
+.ctmChoices{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.ctmChoice{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer}
+.ctmChoice.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.ctmForm input{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 7px;font-size:12px;margin-bottom:6px;background:var(--panel)}
+.ctmList{margin-top:8px}
+.ctmEntry{display:flex;gap:7px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--line);font-size:11px}
+.ctmEntry .tm{color:var(--faint);font-size:10px;width:32px;flex:none;padding-top:1px}
+.ctmEntry .tx{flex:1;min-width:0}
+.ctmEntry .tx small{display:block;color:var(--muted);font-style:italic}
+.ctmEntry .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:800;margin-right:4px}
+.ctmEntry button{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:12px}
+
 @media(min-width:720px){#app{max-width:760px}}
 </style>
 </head>
@@ -291,6 +408,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
       <button class="navBtn" id="btnNextDay" title="Volgende dag">›</button>
     </div>
     <div class="iconRow">
+      <button class="iconBtn" id="btnUndo" title="Herstel laatst verwijderde" disabled>↶</button>
       <button class="iconBtn" id="btnTerug" title="Terug op koers">🧭</button>
       <button class="iconBtn" id="btnSettings" title="Instellingen">⚙</button>
     </div>
@@ -310,6 +428,8 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
       <div class="statusLine" style="margin-bottom:6px"><span class="statusDot" id="liveStatusDot"></span><span id="liveStatusText"></span></div>
       <div id="backupReminderBox"></div>
       <div id="sleepBannerBox"></div>
+      <div id="intentBox"></div>
+      <div id="allDayLive"></div>
       <div class="nowStack">
         <div class="nowSide" id="nowPrev"></div>
         <div class="nowCurrent" id="nowCurrentBox"></div>
@@ -320,14 +440,15 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
         <div class="sectionLabel">Mini-reflectie — 1 tik</div>
         <div class="reflectRow" id="reflectRow"></div>
       </div>
+
+      <div class="card" id="ctmCard"></div>
     </section>
 
     <!-- ================= BOUWEN ================= -->
     <section id="view-builder" class="view">
       <div class="card">
-        <div class="sectionLabel">Framing — intentie voor vandaag</div>
+        <div class="sectionLabel">Framing</div>
         <div class="framing" id="framingBox"></div>
-        <div class="guardNote">Toon = balans, nooit druk.</div>
       </div>
 
       <div class="card" style="position:relative">
@@ -358,11 +479,12 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
       <div class="tipLine" id="terugTip"><span>Vastgelopen?</span><span>›</span></div>
 
       <div class="card">
-        <div class="sectionLabel">
+        <div class="sectionLabel" style="flex-wrap:wrap">
           <span class="statusLine"><span class="statusDot" id="statusDot"></span><span id="statusText">Status</span></span>
-          <span id="calPoints" style="margin-left:auto"></span>
+          <span id="calPoints"></span>
+          <span class="calViewSwitch" id="calViewSwitch"></span>
         </div>
-        <div class="timelineWrap" id="dayTimeline"></div>
+        <div id="calTwoBox"></div>
       </div>
 
       <div class="card">
@@ -380,7 +502,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 
   <button id="ankerBtn" title="Anker — ik loop even vast">⚓</button>
 
-  <footer class="tiny">CR.4 Daybuilder v1.3 · pilot · alles lokaal in je browser · offline-geschikt</footer>
+  <footer class="tiny">CR.4 Daybuilder v1.4 · pilot · alles lokaal in je browser · offline-geschikt</footer>
 </div>
 
 <div id="overlayBg" class="overlayBg hidden"></div>
@@ -410,6 +532,16 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
   <div id="lockBody"></div>
 </div>
 
+<div id="repeatModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Herhalen</span><button class="closeX" data-close="repeatModal">×</button></div>
+  <div id="repeatBody"></div>
+</div>
+
+<div id="poolModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Punten bewerken</span><button class="closeX" data-close="poolModal">×</button></div>
+  <div id="poolBody"></div>
+</div>
+
 <div id="dagImportModal" class="modal hidden">
   <div class="panelHead"><span class="t">Dag toevoegen</span><button class="closeX" data-close="dagImportModal">×</button></div>
   <div id="dagImportBody"></div>
@@ -436,26 +568,32 @@ const CONFIG = {
     clay:'#b08a73', rose:'#b98a93', sand:'#bfae8e'
   },
 
+  // v1.4: teruggebracht tot deze zes tags.
   defaultTags: {
     cr1:{code:'CR.1', name:'Het Echte Zelf', color:'slate'},
     cr2:{code:'CR.2', name:'Life Decisions', color:'dustyblue'},
-    cr3:{code:'CR.3', name:'Reality Check', color:'moss'},
     cr4:{code:'CR.4', name:'Daily Ops', color:'sage'},
-    cr7:{code:'CR.7', name:'Vitality', color:'terracotta'},
     cr9:{code:'CR.9', name:'Sober Platform', color:'mustard'},
-    cr11:{code:'CR.11', name:'Huishouden', color:'clay'},
-    cr12:{code:'CR.12', name:'TimeTable', color:'lavender'},
     werk:{code:'WERK', name:'Werk', color:'rose'},
     prive:{code:'PRIVÉ', name:'Privé', color:'sand'}
   },
+  // Oude tags (v1.0–v1.3) worden bij openen omgezet naar deze:
+  tagMigration: { cr3:'cr1', cr7:'cr1', cr11:'prive', cr12:'cr4' },
 
   durationSteps: [5,10,15,20,30,45,60,90,120,150,180,240,300,360,420,480],
 
-  // CR.1 Essentials — ALLEEN deze voeden de Punten-tab.
-  essentials: [
-    '7–9 uur slaap','Buiten bij opstaan','Buiten voor slapen','Bewegen',
-    'Gezonde voeding','Mediteren','Slaaphygiëne','Supplementen','Wandelen','Water'
+  // CR.1 Essentials — de POOL waaruit je elke week 10 kiest (Punten-tab).
+  // id's e0..e9 komen overeen met de oude v1.3-lijst, zodat oude punten
+  // blijven kloppen. twice:true = pas behaald bij 2x (teller 0/2).
+  essentialPool: [
+    {id:'e0', name:'7–9 uur slaap'}, {id:'e1', name:'Buiten bij opstaan'},
+    {id:'e2', name:'Buiten voor slapen'}, {id:'e3', name:'Bewegen'},
+    {id:'e4', name:'Gezonde voeding'}, {id:'e5', name:'Mediteren'},
+    {id:'e6', name:'Slaaphygiëne'}, {id:'e7', name:'Supplementen'},
+    {id:'e8', name:'Wandelen'}, {id:'e9', name:'Water'},
+    {id:'bc2', name:'Bewust contact (2x)', twice:true}
   ],
+  pointsPerWeek: 10,
 
   feelBetter: [
     'Mediteren','Lezen','Zwemmen','Muziek','Wandelen buiten','Douchen',
@@ -494,7 +632,26 @@ const CONFIG = {
     uitstel: ['Ik reageer hier later op. Nu lukt het even niet goed.', 'Ik kom hier morgen op terug.']
   },
 
-  situaties: ['Gewone dag','Drukke dag','Zakenreis','Vakantie','Ziek / herstellen','Sociale dag'],
+  // Dagstructuur — volgorde vast; "Anders" = zelf intypen.
+  situaties: ['Gewone dag','Weekend','Vrije dag','Vakantie','Anders'],
+
+  // Uitleg achter de ?-icoontjes (alleen bij punten die niet vanzelf spreken).
+  help: {
+    intentie: 'Waar wil je dat deze dag om draait? Eén zin is genoeg.',
+    dagdoel: 'Limiet = meer dan dit is overdrive, dan stop je. Minimum = dit wil je in ieder geval halen. Toon: balans, nooit druk.',
+    dagstructuur: 'Wat voor soort dag is het? Dit helpt om de dag (en later je GA) goed af te stemmen.'
+  },
+
+  // Capture the moment (logboek) — soorten + snelle keuzes.
+  logKinds: {
+    emotie:   {label:'Emotie',  color:'#6f8fae'},
+    craving:  {label:'Craving', color:'#b6615a'},
+    notitie:  {label:'Notitie', color:'#9aa0a8'},
+    punt:     {label:'Punt',    color:'#7f9b7a'},
+    dagstructuur: {label:'Dagstructuur', color:'#bfae8e'}
+  },
+  emotieKeuzes: ['Blij','Rustig','Dankbaar','Verdrietig','Boos','Angstig','Gespannen','Moe','Leeg'],
+  cravingKeuzes: ['Licht','Middel','Sterk'],
 
   // Vier stemmingen — elk met een klein kleuraccent (gedempte tint).
   moods: [
@@ -505,8 +662,11 @@ const CONFIG = {
   ],
 
   // Klein, rustig setje iconen om bij aanmaken te kiezen (optioneel).
-  icons: ['📌','⏰','💧','🍎','🧘','🏃','💼','📖','🧹','☎️','🎵','🚿','🛌','🌿','✅','🧺','🎯','☕','📞','🛁'],
-  defaultIcon: { vast:'📌', flex:'✅', werkblok:'💼', joy:'🎵', health:'🏃' },
+  // v1.4: groene vinkje-icoon (✅) eruit. Bij aanmaken zie je de 3 meest
+  // gebruikte, de rest achter "…".
+  icons: ['📌','⏰','💧','🍎','🧘','🏃','💼','📖','🧹','☎️','🎵','🚿','🛌','🌿','🧺','🎯','☕','📞','🛁'],
+  defaultIcon: { vast:'📌', flex:'⏰', werkblok:'💼', joy:'🎵', health:'🏃' },
+  iconsShown: 3,
 
   // Standaard tijden voor nieuwe items (alle hoofdtypen krijgen nu een tijd).
   defaultTimes: { vast:'09:00', flex:'12:00', werkblok:'10:00', joy:'', health:'' },
@@ -521,16 +681,16 @@ const CONFIG = {
   windDownOptions: [30,60,90],
 
   starterLibrary: [
-    {id:'lib1', type:'health', title:'Wandelen', why:'Hoofd leegmaken, lichaam reguleren', tag:'cr7', duration:20, icon:'🏃', category:'Lichaam'},
+    {id:'lib1', type:'health', title:'Wandelen', why:'Hoofd leegmaken, lichaam reguleren', tag:'cr1', duration:20, icon:'🏃', category:'Lichaam'},
     {id:'lib2', type:'joy', title:'Muziek luisteren', why:'Mood boost, klein moment voor mezelf', tag:'prive', duration:15, icon:'🎵', category:'Plezier'},
     {id:'lib3', type:'werkblok', title:'Focusblok werk', why:'Concrete voortgang op één taak', tag:'werk', duration:90, icon:'💼', category:'Werk'},
     {id:'lib4', type:'flex', title:'CR.1 lezen', why:'Richting en identiteit ophalen', tag:'cr1', duration:10, icon:'📖', category:'Richting'},
-    {id:'lib5', type:'health', title:'Krachttraining', why:'Energie en lichamelijke regulatie', tag:'cr7', duration:45, icon:'🏃', category:'Lichaam'},
+    {id:'lib5', type:'health', title:'Krachttraining', why:'Energie en lichamelijke regulatie', tag:'cr1', duration:45, icon:'🏃', category:'Lichaam'},
     {id:'lib6', type:'joy', title:'Bellen met iemand', why:'Verbinding, niet isoleren', tag:'prive', duration:15, icon:'📞', category:'Plezier'},
-    {id:'lib7', type:'flex', title:'Keuken opruimen', why:'Morgen schoner beginnen', tag:'cr11', duration:10, icon:'🧹', category:'Huishouden'},
-    {id:'lib8', type:'health', title:'Koude douche', why:'Snelle energie-boost', tag:'cr7', duration:5, icon:'🚿', category:'Lichaam'},
-    {id:'lib9', type:'health', title:'Slaap', why:'Herstel en ritme', tag:'cr7', duration:480, icon:'🛌', category:'Lichaam',
-      isSleep:true, time:'23:00', windDown:60, essentialLink: 0}
+    {id:'lib7', type:'flex', title:'Keuken opruimen', why:'Morgen schoner beginnen', tag:'prive', duration:10, icon:'🧹', category:'Huishouden'},
+    {id:'lib8', type:'health', title:'Koude douche', why:'Snelle energie-boost', tag:'cr1', duration:5, icon:'🚿', category:'Lichaam'},
+    {id:'lib9', type:'health', title:'Slaap', why:'Herstel en ritme', tag:'cr1', duration:480, icon:'🛌', category:'Lichaam',
+      isSleep:true, time:'23:00', windDown:60}
   ]
 };
 
@@ -576,7 +736,13 @@ function defaultState(){
     moods: {},
     days: {},
     lastBackup: null,
-    backupReminderDismissedOn: null
+    backupReminderDismissedOn: null,
+    // v1.4
+    essentialPool: JSON.parse(JSON.stringify(CONFIG.essentialPool)),
+    weekSelections: {},   // { maandagISO: [10 essential-id's] } — vast per week
+    log: {},              // { dateISO: [ {id,time,kind,text,reason,ref} ] } — Capture the moment
+    trash: [],            // laatste 3 verwijderde items (herstelknop)
+    schema: 14
   };
 }
 function loadState(){
@@ -587,13 +753,64 @@ function loadState(){
     STATE = Object.assign(defaultState(), parsed);
     STATE.settings = Object.assign(defaultState().settings, parsed.settings||{});
   }catch(e){ STATE = defaultState(); }
+  migrateState();
 }
+
+/* Zet data uit v1.0–v1.3 om naar v1.4 — verliest niets. Veilig om vaker
+   te draaien (idempotent): wordt ook na Importeren aangeroepen. */
+function migrateState(){
+  const S = STATE;
+  // tags: alleen de zes van v1.4; oude tags op items omzetten
+  const allowed = Object.keys(CONFIG.defaultTags);
+  const mapTag = t => allowed.includes(t) ? t : (CONFIG.tagMigration[t] || 'cr4');
+  const newTags = {};
+  allowed.forEach(k=>{ newTags[k] = (S.tags && S.tags[k]) ? S.tags[k] : JSON.parse(JSON.stringify(CONFIG.defaultTags[k])); });
+  S.tags = newTags;
+  const fixItem = it=>{
+    if(!it) return;
+    it.tag = mapTag(it.tag);
+    if(it._expanded!==undefined){ if(it._expanded && !it._view) it._view='max'; delete it._expanded; }
+    delete it.essentialLink; delete it.linkModule;
+  };
+  Object.values(S.days||{}).forEach(d=>{
+    (d.items||[]).forEach(fixItem);
+    if(d.framing){
+      const f = d.framing;
+      if(f.situatie && !CONFIG.situaties.includes(f.situatie)){
+        f.situatieAnders = f.situatieAnders || f.situatie; f.situatie = 'Anders';
+      }
+    }
+  });
+  (S.recurringTemplates||[]).forEach(t=>fixItem(t.data));
+  (S.library||[]).forEach(b=>{ b.tag = mapTag(b.tag); delete b.essentialLink; });
+  // essentials: oude index-sleutels (0..9) -> id's (e0..e9)
+  if(!Array.isArray(S.essentialPool) || !S.essentialPool.length) S.essentialPool = JSON.parse(JSON.stringify(CONFIG.essentialPool));
+  CONFIG.essentialPool.forEach(p=>{ if(!S.essentialPool.find(x=>x.id===p.id)) S.essentialPool.push(JSON.parse(JSON.stringify(p))); });
+  Object.keys(S.essentialsChecked||{}).forEach(date=>{
+    const c = S.essentialsChecked[date]; const out = {};
+    Object.keys(c).forEach(k=>{ out[/^\d+$/.test(k) ? 'e'+k : k] = c[k]; });
+    S.essentialsChecked[date] = out;
+  });
+  S.weekSelections = S.weekSelections || {};
+  // eerdere weken (vóór v1.4) telden de oude 10 — zet die vast zodat de
+  // weekbalkjes blijven kloppen
+  const legacy = ['e0','e1','e2','e3','e4','e5','e6','e7','e8','e9'];
+  const thisWeek = weekKey(todayISO());
+  Object.keys(S.essentialsChecked||{}).forEach(date=>{
+    const wk = weekKey(date);
+    if(wk < thisWeek && !S.weekSelections[wk]) S.weekSelections[wk] = legacy.slice();
+  });
+  S.log = S.log || {};
+  S.trash = Array.isArray(S.trash) ? S.trash : [];
+  S.schema = 14;
+}
+function weekKey(iso){ return addDays(iso, -mondayIndex(fromISO(iso).getDay())); }
 function saveState(){ localStorage.setItem(CONFIG.storageKey, JSON.stringify(STATE)); }
 
 function emptyDay(dateISO){
   return {
     date: dateISO,
-    framing: { intentie:'', maxDoel:'', minDoel:'', situatie:CONFIG.situaties[0] },
+    framing: { intentie:'', maxDoel:'', minDoel:'', situatie:CONFIG.situaties[0], situatieAnders:'' },
     items: [],
     closing: { minDoelMet:false, oneLiner:'', dayRating:0, closed:false }
   };
@@ -667,8 +884,8 @@ function tagChipLabel(tagId){
 }
 
 /* ---------- item helpers ---------- */
-const TYPE_LABEL = { vast:'Vast moment', flex:'Flexibel punt', werkblok:'Werkblok', joy:'Act of joy', health:'Act of health' };
-const TYPE_DEFAULT_TAG = { vast:'cr4', flex:'cr4', werkblok:'werk', joy:'prive', health:'cr7' };
+const TYPE_LABEL = { vast:'Vast moment', flex:'Flexibel moment', werkblok:'Werkmoment', joy:'Act of joy', health:'Act of health' };
+const TYPE_DEFAULT_TAG = { vast:'cr4', flex:'cr4', werkblok:'werk', joy:'prive', health:'cr1' };
 
 function newItem(type){
   return {
@@ -680,22 +897,23 @@ function newItem(type){
     duration: type==='werkblok' ? 60 : (type==='vast' ? null : 20),
     recurring:false, locked:false,
     lockSettings:{ repeatDays:[], repeatTime:'', duration:null },
-    note:'', subtasks:[], linkModule:'',
+    note:'', subtasks:[],
     required: type==='vast' || type==='werkblok',
     done:false, carriedOver:false,
     resultPlanned:'', resultActual:'',
-    essentialLink:null,
+    allDay:false,
     isSleep:false, windDown:60,
     order:0
   };
 }
-/* Items met een tijd sorteren zichzelf automatisch chronologisch; items
-   zonder tijd (alleen nog mogelijk bij Act of joy/health) komen achteraan,
-   op volgorde van hun handmatige ▲▼-positie. */
+/* "Dag"-items (hele dag) staan bovenaan; daarna items met een tijd
+   chronologisch; items zonder tijd achteraan op hun ▲▼-volgorde. */
 function sortKey(it){
+  if(it.allDay) return -1e7 + (it.order||0);
   if(it.time){ return timeToMinutes(it.time) + (it.order||0)/1e6; }
   return 1e7 + (it.order||0);
 }
+function isMoment(it){ return !it.allDay; }
 function orderedItems(day){ return day.items.slice().sort((a,b)=>sortKey(a)-sortKey(b)); }
 function durationIndex(min){
   let idx = CONFIG.durationSteps.indexOf(min);
@@ -711,7 +929,7 @@ function syncTemplate(it){
   t.data = Object.assign({}, t.data, {
     type:it.type, title:it.title, why:it.why, tag:it.tag, icon:it.icon,
     time:it.time, location:it.location, message:it.message, duration:it.duration,
-    required:it.required, isSleep:it.isSleep, windDown:it.windDown, essentialLink:it.essentialLink
+    required:it.required, isSleep:it.isSleep, windDown:it.windDown, allDay:!!it.allDay
   });
 }
 
@@ -749,10 +967,21 @@ function renderLive(){
 
   renderBackupReminder();
   renderSleepBanner(day);
+  renderIntentBox(day);
+  renderCtm();
 
-  const items = orderedItems(day);
+  const allDay = orderedItems(day).filter(it=>it.allDay);
+  $('#allDayLive').innerHTML = allDay.length
+    ? `<div class="allDayRow">${allDay.map(it=>`<span class="allDayChip ${it.done?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
+
+  const items = orderedItems(day).filter(isMoment);
   const notDone = items.filter(it=>!it.done);
 
+  if(items.length===0 && allDay.length){
+    $('#nowPrev').innerHTML=''; $('#nowNext').innerHTML='';
+    $('#nowCurrentBox').innerHTML = `<div class="allDayMsg" style="text-align:center;padding:14px;color:var(--muted);font-size:12px">Geen momenten met een tijd vandaag.</div>`;
+    renderReflect(); return;
+  }
   if(items.length===0){
     $('#nowPrev').innerHTML=''; $('#nowNext').innerHTML='';
     $('#nowCurrentBox').innerHTML = `<div class="cur-eyebrow">Nog niets gebouwd</div><div class="cur-title">Ga naar Bouwen</div><div class="cur-why">Voeg een paar onderdelen toe voor vandaag — zo klein als je wilt.</div>`;
@@ -777,7 +1006,7 @@ function renderLive(){
   const next = notDone[nextIdx+1] || null;
 
   $('#nowPrev').innerHTML = prev ? sideLineHTML(prev) : '<span style="opacity:.4">— start van de dag —</span>';
-  $('#nowNext').innerHTML = next ? sideLineHTML(next) : '<span style="opacity:.4">— laatste voor nu —</span>';
+  $('#nowNext').innerHTML = next ? sideLineHTML(next) + (next.message?`<span class="nextMsg">${esc(next.message)}</span>`:'') : '<span style="opacity:.4">— laatste voor nu —</span>';
 
   let countdownHTML = '';
   if(STATE.settings.countdownEnabled && currentDate===todayISO()){
@@ -789,12 +1018,14 @@ function renderLive(){
     }
   }
   const overdue = current.time && currentDate===todayISO() && timeToMinutes(current.time) < now;
+  // Woordje vooraf: alleen zolang het item nog niet begonnen is
+  const notStarted = !current.time || currentDate!==todayISO() || timeToMinutes(current.time) > now;
 
   $('#nowCurrentBox').innerHTML = `
     <div class="cur-eyebrow">${esc(TYPE_LABEL[current.type])}${overdue?' · loopt uit':''}</div>
     <div class="cur-title">${current.icon?esc(current.icon)+' ':''}${esc(current.title || '(naamloos)')}</div>
     ${current.why?`<div class="cur-why">${esc(current.why)}</div>`:''}
-    ${current.message?`<div class="cur-msg">${esc(current.message)}</div>`:''}
+    ${(current.message && notStarted)?`<div class="cur-msg">${esc(current.message)}</div>`:''}
     <div class="cur-meta">
       ${current.time?`<span class="timeBadge">${esc(current.time)}${current.location?' · '+esc(current.location):''}</span>`:''}
       ${current.duration?`<span class="durBadge">${fmtDuration(current.duration)}</span>`:''}
@@ -805,6 +1036,18 @@ function renderLive(){
   `;
   renderReflect();
 }
+function renderIntentBox(day){
+  const f = day.framing || {};
+  const box = $('#intentBox'); if(!box) return;
+  if(!f.intentie && !f.maxDoel && !f.minDoel){ box.innerHTML=''; return; }
+  const open = !!liveDagdoelOpen;
+  box.innerHTML = `<div class="intentBox">
+    ${f.intentie?`<div class="intentLbl">Intentie</div><div class="intentText">${esc(f.intentie)}</div>`:''}
+    ${(f.maxDoel||f.minDoel)?`<button class="dagdoelBtn" id="btnDagdoel">Dagdoel ${open?'▴':'▾'}</button>
+      ${open?`<div class="dagdoelBox">${f.maxDoel?`Limiet: <b>${esc(f.maxDoel)}</b>`:''}${(f.maxDoel&&f.minDoel)?' · ':''}${f.minDoel?`Minimum: <b>${esc(f.minDoel)}</b>`:''}</div>`:''}`:''}
+  </div>`;
+}
+let liveDagdoelOpen = false;
 function sideLineHTML(it){ return `<b>${it.icon?esc(it.icon)+' ':''}${esc(it.title || '(naamloos)')}</b>${it.time?' · '+esc(it.time):''}`; }
 function tagBadgeHTML(tagId){
   const t = tagInfo(tagId); const label = tagChipLabel(tagId);
@@ -852,23 +1095,33 @@ function renderBackupReminder(){
 /* =====================================================================
    RENDER — BOUWEN
    ===================================================================== */
+function helpBtn(key){ return `<button class="helpBtn" data-help="${key}" title="Uitleg">?</button>`; }
+function helpLine(key){ return `<div class="helpText ${openHelp[key]?'open':''}" id="help-${key}">${esc(CONFIG.help[key])}</div>`; }
+let openHelp = {};
 function renderFraming(){
   const day = peekDay(currentDate);
   const f = day.framing;
+  const sit = f.situatie || CONFIG.situaties[0];
   $('#framingBox').innerHTML = `
-    <div class="full"><label>Intentie voor vandaag</label><input type="text" data-framing="intentie" value="${esc(f.intentie)}" placeholder="Waar wil ik dat deze dag om draait?"></div>
-    <div><label>Maximum-doel (plafond)</label><input type="text" data-framing="maxDoel" value="${esc(f.maxDoel)}" placeholder="Meer dan dit = overdrive"></div>
-    <div><label>Minimum-doel (vloer)</label><input type="text" data-framing="minDoel" value="${esc(f.minDoel)}" placeholder="Dit moet minstens lukken"></div>
-    <div class="full"><label>Capture the moment — wat voor dag is dit?</label>
-      <select data-framing="situatie">${CONFIG.situaties.map(s=>`<option ${s===f.situatie?'selected':''}>${esc(s)}</option>`).join('')}</select>
+    <div class="full">
+      <div class="framingHead">Intentie ${helpBtn('intentie')}</div>${helpLine('intentie')}
+      <input type="text" data-framing="intentie" value="${esc(f.intentie)}">
+    </div>
+    <div class="full"><div class="framingHead big">Dagdoel ${helpBtn('dagdoel')}</div>${helpLine('dagdoel')}</div>
+    <div><label>Limiet</label><input type="text" data-framing="maxDoel" value="${esc(f.maxDoel)}"></div>
+    <div><label>Minimum</label><input type="text" data-framing="minDoel" value="${esc(f.minDoel)}"></div>
+    <div class="full">
+      <div class="framingHead" style="margin-top:4px">Dagstructuur ${helpBtn('dagstructuur')}</div>${helpLine('dagstructuur')}
+      <select data-framing="situatie">${CONFIG.situaties.map(x=>`<option ${x===sit?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      ${sit==='Anders'?`<input type="text" data-framing="situatieAnders" value="${esc(f.situatieAnders||'')}" placeholder="Wat voor dag is het?" style="margin-top:4px">`:''}
     </div>
   `;
 }
 function renderAddMenu(){
   $('#addMenuPopup').innerHTML = `
-    <button data-add="flex">Flexibel punt</button>
+    <button data-add="flex">Flexibel moment</button>
     <button data-add="vast">Vast moment</button>
-    <button data-add="werkblok">Werkblok</button>
+    <button data-add="werkblok">Werkmoment</button>
     <div class="soft">
       <button data-add="joy">Act of joy</button>
       <button data-add="health">Act of health</button>
@@ -889,25 +1142,48 @@ function renderBuilderList(){
   }).join('');
 }
 
+/* De 3 meest gebruikte iconen (over al je items + library); het icoon
+   van dit item zelf staat er altijd tussen. */
+function topIcons(current){
+  const count = {};
+  const add = ic=>{ if(ic && CONFIG.icons.includes(ic)) count[ic]=(count[ic]||0)+1; };
+  Object.values(STATE.days).forEach(d=>(d.items||[]).forEach(it=>add(it.icon)));
+  (STATE.library||[]).forEach(b=>add(b.icon));
+  let list = CONFIG.icons.slice().sort((x,y)=>(count[y]||0)-(count[x]||0) || CONFIG.icons.indexOf(x)-CONFIG.icons.indexOf(y)).slice(0, CONFIG.iconsShown);
+  if(current && CONFIG.icons.includes(current) && !list.includes(current)) list = [current].concat(list.slice(0, CONFIG.iconsShown-1));
+  return list;
+}
+const SVG_MIN = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 7.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+const SVG_MAX = '<svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+const SVG_X   = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+
 function itemCardHTML(it, untimedIdx, untimedTotal){
   const t = tagInfo(it.tag);
-  const expanded = it._expanded ? 'expanded' : '';
+  const view = it._view || 'normal';   // 'min' | 'normal' | 'max'
   const locked = it.locked ? 'locked' : '';
-  const hasTime = !!it.time;
-  const showDuration = it.duration!=null;
+  const moment = !it.allDay;
+  const hasTime = moment && !!it.time;
+  const showDuration = moment && it.duration!=null;
   const showRequired = it.type==='vast' || it.type==='werkblok';
   const dis = it.locked ? 'disabled' : '';
   const ro = it.locked ? 'readonly' : '';
+  const viewCls = view==='min' ? 'isMin' : (view==='max' ? 'isMax' : '');
 
   const motifHTML = it._motifEditing
     ? `<div class="motifRow"><input type="text" class="motifInput" data-field="why" value="${esc(it.why)}" placeholder="Mijn motief…" autofocus></div>`
     : (it.why
         ? `<div class="motifRow"><span class="motifLine" data-motifopen>${esc(it.why)}</span></div>`
-        : `<div class="motifRow"><button class="motifArrow" data-motifopen ${dis}>▸</button></div>`);
+        : `<div class="motifRow"><button class="motifArrow" data-motifopen ${dis} title="Mijn motief">▸</button></div>`);
+
+  const icons = it._iconsAll ? CONFIG.icons : topIcons(it.icon);
 
   return `
-  <div class="item ${it.done?'isdone':''} ${it.carriedOver?'carried':''} ${expanded} ${locked}" data-id="${it.id}" style="border-left:3px solid ${colorHex(t.color)}">
-    <button class="expandBtn" data-toggle="expand">${it._expanded?'minder ▴':'meer ▾'}</button>
+  <div class="item ${it.done?'isdone':''} ${it.carriedOver?'carried':''} ${viewCls} ${locked}" data-id="${it.id}" style="border-left:3px solid ${colorHex(t.color)}">
+    <div class="winCtrls">
+      <button class="winBtn" data-win="min" title="${view==='min'?'Terug naar normaal':'Minimaliseren'}">${SVG_MIN}</button>
+      <button class="winBtn" data-win="max" title="${view==='max'?'Terug naar normaal':'Alles openen'}">${SVG_MAX}</button>
+      <button class="winBtn" data-delete title="Verwijderen" ${dis}>${SVG_X}</button>
+    </div>
     <div class="row1">
       <div class="reorder">
         ${hasTime ? '' : `<button data-move="up" ${untimedIdx===0?'disabled':''}>▲</button><button data-move="down" ${untimedIdx===untimedTotal-1?'disabled':''}>▼</button>`}
@@ -916,50 +1192,41 @@ function itemCardHTML(it, untimedIdx, untimedTotal){
       <div class="main">
         <div class="titleRow">
           <span class="iconGlyph">${esc(it.icon||'')}</span>
-          <input type="text" class="titleInput" data-field="title" value="${esc(it.title)}" placeholder="${esc(TYPE_LABEL[it.type])}…" ${ro}>
+          <input type="text" class="titleInput" data-field="title" value="${esc(it.title)}" placeholder="Naam" ${ro}>
+          ${view==='min' ? `<span class="minTime">${it.allDay?'Dag':(it.time||'')}</span>` : ''}
         </div>
         ${motifHTML}
-        ${(!it._expanded && it.message)?`<div class="messageLine">💬 ${esc(it.message)}</div>`:''}
+        ${(view!=='max' && it.message)?`<div class="messageLine">💬 ${esc(it.message)}</div>`:''}
       </div>
     </div>
     <div class="meta">
       <span class="tagChip"><select data-field="tag" ${dis}>${tagOptionsHTML(it.tag)}</select></span>
-      <input type="time" class="timeBadge" data-field="time" value="${it.time||''}" style="border:1px solid var(--line);background:var(--panel)" ${dis}>
+      <button class="dayToggle ${it.allDay?'on':''}" data-toggle="allday" title="Hele dag of op een tijd" ${dis}>${it.allDay?'Dag':'Moment'}</button>
+      ${moment?`<input type="time" class="timeBadge" data-field="time" value="${it.time||''}" style="border:1px solid var(--line);background:var(--panel)" ${dis}>`:''}
       ${showDuration?`<span class="durBadge">${fmtDuration(it.duration)}</span>`:''}
       ${showRequired?`<span class="reqChip ${it.required?'on':''}" data-toggle="required">verplicht</span>`:''}
       <span class="ctrlCluster">
-        <button class="infBtn ${it.recurring?'on':''}" data-toggle="recurring" title="Herhalend" ${dis}>∞</button>
+        <button class="infBtn ${it.recurring?'on':''}" data-openrepeat title="Herhalen" ${dis}>∞</button>
         <button class="lockBtn ${it.locked?'on':''}" data-openlock title="Vergrendelen"><span class="dot"></span></button>
-        <button class="delBtn" data-delete title="Verwijderen" ${dis}>×</button>
       </span>
     </div>
     <div class="detail">
       ${showDuration?`<label>Duur</label><div class="rangeRow"><input type="range" min="0" max="${CONFIG.durationSteps.length-1}" value="${durationIndex(it.duration)}" data-field="durationIdx" ${dis}><span class="durBadge">${fmtDuration(it.duration)}</span></div>`:''}
 
       <label>Icoon</label>
-      <div class="iconPick">${CONFIG.icons.map(ic=>`<button type="button" data-seticon="${ic}" class="${ic===it.icon?'on':''}" ${dis}>${ic}</button>`).join('')}</div>
+      <div class="iconPick">${icons.map(ic=>`<button type="button" data-seticon="${ic}" class="${ic===it.icon?'on':''}" ${dis}>${ic}</button>`).join('')}<button type="button" class="moreBtn" data-iconsall title="${it._iconsAll?'Minder':'Alle iconen'}">${it._iconsAll?'‹':'…'}</button></div>
 
-      <label>Locatie (optioneel)</label>
-      <input type="text" data-field="location" value="${esc(it.location)}" placeholder="bijv. 54-215 of thuis" ${ro}>
+      <label>Locatie</label>
+      <input type="text" class="optHint" data-field="location" value="${esc(it.location)}" placeholder="(optioneel)" ${ro}>
 
-      <label>Moment-bericht (optioneel, verschijnt kort zodra dit item "live" wordt)</label>
-      <input type="text" data-field="message" value="${esc(it.message)}" placeholder="bijv. Geniet van het moment!" ${ro}>
+      <label>Woordje vooraf</label>
+      <input type="text" class="optHint" data-field="message" value="${esc(it.message)}" placeholder="(optioneel)" ${ro}>
 
       ${it.isSleep?`<label>Afbouwmelding</label>
         <select data-field="windDown" ${dis}>${CONFIG.windDownOptions.map(m=>`<option value="${m}" ${m===it.windDown?'selected':''}>${m} min vooraf</option>`).join('')}</select>`:''}
 
       <label>Notitie</label>
-      <textarea data-field="note" placeholder="Eigen notitie…" ${dis}>${esc(it.note)}</textarea>
-
-      <label>Link naar andere CR-module</label>
-      <input type="text" data-field="linkModule" value="${esc(it.linkModule)}" placeholder="bijv. CR.1.5.html" ${ro}>
-      ${it.linkModule?`<div style="margin-top:4px"><a href="${esc(it.linkModule)}" target="_blank" style="font-size:11px;color:var(--accent)">↗ open ${esc(it.linkModule)}</a></div>`:''}
-
-      <label>Koppel aan CR.1 Essential (voedt Punten)</label>
-      <select data-field="essentialLink" ${dis}>
-        <option value="">— geen koppeling —</option>
-        ${CONFIG.essentials.map((e,i)=>`<option value="${i}" ${it.essentialLink===i?'selected':''}>${esc(e)}</option>`).join('')}
-      </select>
+      <textarea class="noteArea optHint" rows="2" data-field="note" placeholder="(optioneel)" ${dis}>${esc(it.note)}</textarea>
 
       <label>Subtaken</label>
       <div class="subtaskList">
@@ -976,9 +1243,9 @@ function itemCardHTML(it, untimedIdx, untimedTotal){
 
       ${it.type==='werkblok'?`
       <label>Gewenst resultaat (vooraf)</label>
-      <textarea data-field="resultPlanned" placeholder="Wanneer is dit werkblok geslaagd?" ${dis}>${esc(it.resultPlanned)}</textarea>
+      <textarea data-field="resultPlanned" class="optHint" placeholder="(optioneel)" ${dis}>${esc(it.resultPlanned)}</textarea>
       <label>Werkelijk resultaat (achteraf)</label>
-      <textarea data-field="resultActual" placeholder="Wat is er echt uitgekomen?">${esc(it.resultActual)}</textarea>`:''}
+      <textarea data-field="resultActual" class="optHint" placeholder="(optioneel)">${esc(it.resultActual)}</textarea>`:''}
     </div>
   </div>`;
 }
@@ -1031,6 +1298,27 @@ function renderMonthPopup(){
   `;
 }
 
+/* ---------- Essentials (punten) helpers ---------- */
+function poolItem(id){ return (STATE.essentialPool||[]).find(p=>p.id===id) || {id, name:id}; }
+function weekSelection(iso){ return STATE.weekSelections[weekKey(iso)] || null; }
+/* Geldige selectie voor een dag: de vastgezette van die week, of (nog niet
+   gekozen) een voorstel = vorige week of de eerste 10 uit de pool. */
+function proposedSelection(iso){
+  const sel = weekSelection(iso); if(sel) return sel;
+  const prev = STATE.weekSelections[weekKey(addDays(iso,-7))];
+  if(prev) return prev.filter(id=>{ const p=(STATE.essentialPool||[]).find(x=>x.id===id); return p && !p.archived; }).slice(0, CONFIG.pointsPerWeek);
+  return (STATE.essentialPool||[]).filter(p=>!p.archived).slice(0, CONFIG.pointsPerWeek).map(p=>p.id);
+}
+function essVal(iso, id){ const c = STATE.essentialsChecked[iso]||{}; return c[id]; }
+function essDone(iso, id){
+  const v = essVal(iso,id);
+  if(poolItem(id).twice) return (typeof v==='number' ? v : (v?2:0)) >= 2;
+  return !!v;
+}
+function essScore(iso){ const sel = proposedSelection(iso); return { done: sel.filter(id=>essDone(iso,id)).length, total: sel.length }; }
+
+/* ---------- Kalender: twee kalenders, drie weergaven ---------- */
+const CAL_VIEWS = [['agenda','Agenda'],['ess','Essentials'],['compact','Naast elkaar']];
 function renderCalendar(){
   calendarAnchor = currentDate;
   renderWeekStrip();
@@ -1042,30 +1330,57 @@ function renderCalendar(){
   $('#statusText').textContent = STATUS_LABEL[status];
   renderCalendarPoints();
 
+  const v = STATE.settings.calView || 'agenda';
+  $('#calViewSwitch').innerHTML = CAL_VIEWS.map(([k,l])=>`<button data-calview="${k}" class="${k===v?'on':''}">${l}</button>`).join('');
+
   const items = orderedItems(day);
-  if(items.length===0){
-    $('#dayTimeline').innerHTML = `<div style="font-size:11px;color:var(--muted)">Nog niets gebouwd voor deze dag. Ga naar Bouwen.</div>`;
-  } else {
-    $('#dayTimeline').innerHTML = items.map((it,i)=>{
-      const movable = it.type==='flex' && !it.locked;
-      return `
-      <div class="tlRow" ${it.time?`data-time="${it.time}"`:''} data-id="${it.id}">
-        ${movable?'<span class="tlHandle" title="Slepen om tijd te wijzigen">⋮⋮</span>':'<span style="width:11px"></span>'}
-        <span class="tlNum">${i+1}</span>
-        <input type="checkbox" class="tlCheck" data-field="done" data-tlid="${it.id}" ${it.done?'checked':''}>
-        <div class="tlBody">
-          <div class="tlTitle ${it.done?'isdone':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</div>
-          <div class="tlMeta">
-            ${movable
-              ? `<input type="time" class="tlTimeInput" data-tltime="${it.id}" value="${it.time||''}">`
-              : (it.time?esc(it.time):'')}
-            ${it.duration?' · '+fmtDuration(it.duration):''}${it.location?' · '+esc(it.location):''}
+  const allDay = items.filter(it=>it.allDay);
+  const moments = items.filter(isMoment);
+  const sel = proposedSelection(currentDate);
+  const allDayHTML = allDay.length ? `<div class="allDayCal">${allDay.map(it=>`<span class="allDayChip ${it.done?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
+
+  const agendaFull = () => allDayHTML + (moments.length
+    ? `<div class="timelineWrap" id="dayTimeline">${moments.map((it,i)=>{
+        const movable = it.type==='flex' && !it.locked;
+        return `
+        <div class="tlRow" ${it.time?`data-time="${it.time}"`:''} data-id="${it.id}">
+          ${movable?'<span class="tlHandle" title="Slepen om tijd te wijzigen">⋮⋮</span>':'<span style="width:11px"></span>'}
+          <span class="tlNum">${i+1}</span>
+          <input type="checkbox" class="tlCheck" data-field="done" data-tlid="${it.id}" ${it.done?'checked':''}>
+          <div class="tlBody">
+            <div class="tlTitle ${it.done?'isdone':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</div>
+            <div class="tlMeta">
+              ${movable ? `<input type="time" class="tlTimeInput" data-tltime="${it.id}" value="${it.time||''}">` : (it.time?esc(it.time):'')}
+              ${it.duration?' · '+fmtDuration(it.duration):''}${it.location?' · '+esc(it.location):''}
+            </div>
           </div>
-        </div>
-      </div>`;
-    }).join('');
-    positionNowLine(items);
+        </div>`; }).join('')}</div>`
+    : `<div style="font-size:11px;color:var(--muted)">${allDay.length?'Geen momenten met een tijd.':'Nog niets gebouwd voor deze dag. Ga naar Bouwen.'}</div>`);
+
+  const essFull = () => sel.length
+    ? sel.map(id=>{ const p=poolItem(id); const d=essDone(currentDate,id);
+        const cnt = p.twice ? ` <small style="color:var(--faint)">${Math.min(2, typeof essVal(currentDate,id)==='number'?essVal(currentDate,id):(essVal(currentDate,id)?2:0))}/2</small>` : '';
+        return `<div class="essRow ${d?'done':''}"><span class="mk ${d?'on':''}">${d?'✓':''}</span><span class="n">${esc(p.name)}${cnt}</span></div>`; }).join('')
+    : `<div style="font-size:11px;color:var(--muted)">Nog geen Essentials gekozen (zie Punten).</div>`;
+
+  const strip = (kind) => {
+    if(kind==='ess') return `<div class="calStrip" data-calview="ess" title="Essentials openen">${sel.map(id=>`<span class="sdot ${essDone(currentDate,id)?'on':''}"></span>`).join('')}<span class="stripLbl">Essentials</span></div>`;
+    return `<div class="calStrip" data-calview="agenda" title="Agenda openen">${moments.map(it=>`<span class="sdot ${it.done?'on':''}"></span>`).join('')}<span class="stripLbl">Agenda</span></div>`;
+  };
+
+  let html;
+  if(v==='ess'){
+    html = `<div class="calGrid v-ess">${strip('agenda')}<div><div class="calColHead">Essentials</div>${essFull()}</div></div>`;
+  } else if(v==='compact'){
+    const ag = allDay.map(it=>`<div class="compactRow ${it.done?'done':''}"><span class="ct">Dag</span>${esc(it.title||'(naamloos)')}</div>`).join('') +
+               moments.map(it=>`<div class="compactRow ${it.done?'done':''}"><span class="ct">${esc(it.time||'')}</span>${esc(it.title||'(naamloos)')}</div>`).join('');
+    const es = sel.map(id=>`<div class="compactRow ${essDone(currentDate,id)?'done':''}">${essDone(currentDate,id)?'✓ ':''}${esc(poolItem(id).name)}</div>`).join('');
+    html = `<div class="calGrid v-compact"><div><div class="calColHead">Agenda</div>${ag||'<div class="compactRow" style="color:var(--faint)">—</div>'}</div><div><div class="calColHead">Essentials</div>${es||'<div class="compactRow" style="color:var(--faint)">—</div>'}</div></div>`;
+  } else {
+    html = `<div class="calGrid v-agenda"><div>${agendaFull()}</div>${strip('ess')}</div>`;
   }
+  $('#calTwoBox').innerHTML = html;
+  if(v==='agenda' && moments.length) positionNowLine(moments);
   renderClosing();
 }
 
@@ -1107,12 +1422,12 @@ function renderClosing(){
   $('#closingBox').innerHTML = `
     ${werkblokken.length ? werkblokken.map(w=>`
       <div style="margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700">${esc(w.title||'Werkblok')}</div>
+        <div style="font-size:11px;font-weight:700">${esc(w.title||'Werkmoment')}</div>
         <textarea data-closeresult="${w.id}" placeholder="Werkelijk resultaat…" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;min-height:40px">${esc(w.resultActual)}</textarea>
-      </div>`).join('') : '<div style="font-size:11px;color:var(--muted)">Geen werkblokken vandaag.</div>'}
+      </div>`).join('') : '<div style="font-size:11px;color:var(--muted)">Geen werkmomenten vandaag.</div>'}
 
     <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px">
-      <input type="checkbox" id="minDoelChk" ${day.closing.minDoelMet?'checked':''}> Minimum-doel gehaald
+      <input type="checkbox" id="minDoelChk" ${day.closing.minDoelMet?'checked':''}> Minimum gehaald
     </label>
 
     <label style="display:block;font-size:10px;color:var(--muted);margin-top:8px">Hoe was de dag? (1–5)</label>
@@ -1137,38 +1452,113 @@ function renderCalendarPoints(){
   const el = $('#calPoints');
   if(!el) return;
   if(!STATE.settings.pointsEnabled){ el.innerHTML = ''; return; }
-  const checked = STATE.essentialsChecked[currentDate] || {};
-  const total = CONFIG.essentials.length;
-  const done = CONFIG.essentials.filter((_,i)=>checked[i]).length;
-  el.innerHTML = `<span class="durBadge">Punten ${done}/${total}</span>`;
+  const sc = essScore(currentDate);
+  el.innerHTML = `<span class="durBadge">Punten ${sc.done}/${sc.total}</span>`;
 }
 
+/* Punten-tab: 10 Essentials per week, vast voor die week. */
+let pickDraft = null; // tijdelijke keuze tijdens het kiezen van de week
 function renderPoints(){
   if(!STATE.settings.pointsEnabled){
     $('#pointsCard').innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:30px 10px">Punten-tab staat uit. Zet hem aan via instellingen (⚙).</div>`;
     return;
   }
-  const checked = STATE.essentialsChecked[currentDate] || {};
-  const total = CONFIG.essentials.length;
-  const done = CONFIG.essentials.filter((_,i)=>checked[i]).length;
+  const wk = weekKey(currentDate);
+  const locked = STATE.weekSelections[wk];
+  const N = CONFIG.pointsPerWeek;
+  const head = `<div class="pointsHead"><div class="sectionLabel" style="margin:0">Punten — geen strafpunten</div><button class="editLink" id="btnEditPool">✎ bewerk</button></div>`;
 
+  if(!locked){
+    if(!pickDraft || pickDraft.wk!==wk) pickDraft = { wk, ids: proposedSelection(currentDate).slice() };
+    const pool = (STATE.essentialPool||[]).filter(p=>!p.archived);
+    const n = pickDraft.ids.length;
+    $('#pointsCard').innerHTML = head + `
+      <div class="pickInfo">Nieuwe week (vanaf ${esc(fmtDateShort(wk))}). Kies je ${N} Essentials — die staan daarna vast tot volgende week. <b>${n}/${N}</b> gekozen.</div>
+      ${pool.map(p=>`<label class="pickRow"><input type="checkbox" data-pick="${p.id}" ${pickDraft.ids.includes(p.id)?'checked':''} ${(!pickDraft.ids.includes(p.id) && n>=N)?'disabled':''}> ${esc(p.name)}</label>`).join('')}
+      <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="primaryBtn" id="btnLockWeek" ${n===N?'':'disabled'}>Vastzetten voor deze week</button></div>
+    `;
+    return;
+  }
+
+  const sc = essScore(currentDate);
   let weekHTML = '';
   for(let i=6;i>=0;i--){
     const iso = addDays(todayISO(), -i);
-    const c = STATE.essentialsChecked[iso] || {};
-    const n = CONFIG.essentials.filter((_,idx)=>c[idx]).length;
-    const pct = Math.round(n/total*100);
+    const s2 = essScore(iso);
+    const pct = s2.total ? Math.round(s2.done/s2.total*100) : 0;
     weekHTML += `<div class="pointsWeekCol"><div class="pointsWeekBar"><i style="height:${pct}%"></i></div><div class="pointsWeekLbl">${fromISO(iso).getDate()}</div></div>`;
   }
-
-  $('#pointsCard').innerHTML = `
-    <div class="sectionLabel">Punten — alleen CR.1 Essentials, geen strafpunten</div>
-    <div style="font-size:11px;color:var(--muted)">${done} / ${total} vandaag</div>
-    <div class="meter">${CONFIG.essentials.map((_,i)=>`<div class="meterBox ${checked[i]?'on':''}"></div>`).join('')}</div>
-    ${CONFIG.essentials.map((e,i)=>`<label class="essItem"><input type="checkbox" data-ess="${i}" ${checked[i]?'checked':''}> ${esc(e)}</label>`).join('')}
+  $('#pointsCard').innerHTML = head + `
+    <div style="font-size:11px;color:var(--muted)">${sc.done} / ${sc.total} vandaag</div>
+    <div class="meter">${locked.map((_,i)=>`<div class="meterBox ${i<sc.done?'on':''}"></div>`).join('')}</div>
+    ${locked.map(id=>{
+      const p = poolItem(id);
+      if(p.twice){
+        const raw = essVal(currentDate,id); const n = Math.min(2, typeof raw==='number'?raw:(raw?2:0));
+        return `<div class="essItem"><span class="essName">${esc(p.name)}</span><button class="essCount ${n>=2?'on':''}" data-esscount="${id}" title="Tik per bewust contact">${n}/2</button></div>`;
+      }
+      return `<label class="essItem"><input type="checkbox" data-ess="${id}" ${essDone(currentDate,id)?'checked':''}> <span class="essName">${esc(p.name)}</span></label>`;
+    }).join('')}
     <div class="sectionLabel" style="margin-top:12px">Laatste 7 dagen</div>
     <div class="pointsWeek">${weekHTML}</div>
   `;
+}
+function renderPoolModal(){
+  const wk = weekKey(currentDate);
+  const sel = STATE.weekSelections[wk] || [];
+  const pool = (STATE.essentialPool||[]).filter(p=>!p.archived);
+  $('#poolBody').innerHTML = `
+    <div class="pickInfo">Je pool met habits. Elke week kies je er ${CONFIG.pointsPerWeek} uit. Je keuze voor deze week blijft staan; wijzigingen gelden vanaf de volgende week.</div>
+    ${pool.map(p=>`<div class="poolRow"><span>${esc(p.name)}${sel.includes(p.id)?' <small style="color:var(--faint)">· deze week</small>':''}</span><button data-poolarchive="${p.id}" title="Uit de pool halen">×</button></div>`).join('')}
+    <div class="poolAdd"><input type="text" id="poolNewName" placeholder="Nieuwe habit…"><button id="btnPoolAdd">Toevoegen</button></div>
+  `;
+}
+
+/* Punten in het logboek (Capture the moment) bijhouden. */
+function logPoint(iso, id, on){
+  STATE.log[iso] = STATE.log[iso] || [];
+  STATE.log[iso] = STATE.log[iso].filter(e=>!(e.kind==='punt' && e.ref===id));
+  if(on) STATE.log[iso].push({ id:uid('log'), time: iso===todayISO()?nowHHMM():'', kind:'punt', text: poolItem(id).name, ref:id });
+}
+function setEss(iso, id, value){
+  STATE.essentialsChecked[iso] = STATE.essentialsChecked[iso] || {};
+  STATE.essentialsChecked[iso][id] = value;
+  logPoint(iso, id, essDone(iso, id));
+}
+function nowHHMM(){ const d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+/* ---------- Capture the moment (logboek, kleine versie) ---------- */
+let ctmOpen = false, ctmKind = null, ctmChoice = null;
+function renderCtm(){
+  const card = $('#ctmCard'); if(!card) return;
+  const entries = (STATE.log[currentDate]||[]).slice().sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  const f = peekDay(currentDate).framing || {};
+  const sitText = f.situatie==='Anders' ? (f.situatieAnders||'Anders') : f.situatie;
+  let html = `<div class="ctmHead" id="ctmToggle"><span class="sectionLabel" style="margin:0">Capture the moment</span><span class="cnt">${entries.length?entries.length+' · ':''}${ctmOpen?'▴':'▾'}</span></div>`;
+  if(ctmOpen){
+    const kinds = ['emotie','craving','notitie'];
+    html += `<div class="ctmBody">
+      <div class="ctmKinds">${kinds.map(k=>`<button class="ctmKind ${ctmKind===k?'on':''}" data-ctmkind="${k}"><span class="ctmDot" style="background:${CONFIG.logKinds[k].color}"></span>${CONFIG.logKinds[k].label}</button>`).join('')}</div>`;
+    if(ctmKind){
+      const choices = ctmKind==='emotie' ? CONFIG.emotieKeuzes : (ctmKind==='craving' ? CONFIG.cravingKeuzes : []);
+      html += `<div class="ctmForm">
+        ${choices.length?`<div class="ctmChoices">${choices.map(c=>`<button class="ctmChoice ${ctmChoice===c?'on':''}" data-ctmchoice="${esc(c)}">${esc(c)}</button>`).join('')}</div>`:''}
+        <input type="text" id="ctmText" placeholder="${ctmKind==='notitie'?'Wat wil je vastleggen?':(ctmKind==='craving'?'Waar had je zin in? (optioneel)':'Of in eigen woorden… (optioneel)')}">
+        <input type="text" id="ctmReason" placeholder="Reden (optioneel)">
+        <div style="display:flex;justify-content:flex-end"><button class="primaryBtn" id="btnCtmSave">Vastleggen</button></div>
+      </div>`;
+    }
+    html += `<div class="ctmList">
+      ${sitText?`<div class="ctmEntry"><span class="tm"></span><span class="ctmDot" style="background:${CONFIG.logKinds.dagstructuur.color};margin-top:4px"></span><div class="tx"><span class="lbl">Dagstructuur</span>${esc(sitText)}</div></div>`:''}
+      ${entries.map(e=>{ const k=CONFIG.logKinds[e.kind]||CONFIG.logKinds.notitie; return `<div class="ctmEntry">
+        <span class="tm">${esc(e.time||'')}</span><span class="ctmDot" style="background:${k.color};margin-top:4px"></span>
+        <div class="tx"><span class="lbl">${esc(k.label)}</span>${esc(e.text||'')}${e.reason?`<small>${esc(e.reason)}</small>`:''}</div>
+        ${e.kind==='punt'?'':`<button data-ctmdel="${e.id}" title="Verwijderen">×</button>`}
+      </div>`; }).join('')}
+      ${(!entries.length && !sitText)?'<div style="font-size:11px;color:var(--faint);margin-top:4px">Nog niets vastgelegd vandaag.</div>':''}
+    </div></div>`;
+  }
+  card.innerHTML = html;
 }
 
 /* =====================================================================
@@ -1274,7 +1664,7 @@ function renderSettings(){
       </div>
       <div style="font-size:10px;color:var(--faint);margin-top:6px">"Dag toevoegen" voegt één dag uit een apart dagbestand toe aan je bestaande data — niets anders wordt aangepast.</div>
     </div>
-    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.3 · pilot · data blijft lokaal op dit toestel.</div>
+    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.4 · pilot · data blijft lokaal op dit toestel.</div>
   `;
 }
 
@@ -1319,7 +1709,7 @@ function showToast(msg, onUndo){
    ===================================================================== */
 function renderAll(){
   $('#btnToday').textContent = fmtDateShort(currentDate) + (currentDate===todayISO()?' · vandaag':'');
-  renderLive(); renderFraming(); renderBuilderList(); renderCalendar(); renderPoints();
+  renderLive(); renderFraming(); renderBuilderList(); renderCalendar(); renderPoints(); updateUndoBtn();
 }
 function setView(v){
   currentView = v;
@@ -1387,7 +1777,7 @@ function init(){
     if(addBtn){
       const day = getDay(currentDate);
       const it = newItem(addBtn.dataset.add);
-      it.order = day.items.length; day.items.push(it); it._expanded = true;
+      it.order = day.items.length; day.items.push(it); it._view = 'max';
       saveState(); renderAll();
       $('#addMenuPopup').classList.add('hidden');
     }
@@ -1395,7 +1785,8 @@ function init(){
 
   // framing
   document.addEventListener('input', e=>{ const f=e.target.closest('[data-framing]'); if(f && !f.matches('select')){ getDay(currentDate).framing[f.dataset.framing]=f.value; saveState(); } });
-  document.addEventListener('change', e=>{ const f=e.target.closest('select[data-framing]'); if(f){ getDay(currentDate).framing[f.dataset.framing]=f.value; saveState(); } });
+  document.addEventListener('change', e=>{ const f=e.target.closest('select[data-framing]'); if(f){ getDay(currentDate).framing[f.dataset.framing]=f.value; saveState(); renderFraming(); renderCtm(); } });
+  document.addEventListener('focusout', e=>{ const f=e.target.closest('input[data-framing]'); if(f){ renderLive(); } });
 
   // mood
   document.addEventListener('click', e=>{
@@ -1451,7 +1842,7 @@ function init(){
       const card = sel.closest('.item'); if(!card) return;
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
       if(it.locked) return;
-      const v = sel.dataset.field==='essentialLink' ? (sel.value===''?null:+sel.value) : (sel.dataset.field==='windDown' ? +sel.value : sel.value);
+      const v = sel.dataset.field==='windDown' ? +sel.value : sel.value;
       it[sel.dataset.field] = v; saveState(); syncTemplate(it); renderAll(); return;
     }
     const timeInp = e.target.closest('input[type=time][data-field]');
@@ -1490,12 +1881,7 @@ function init(){
       const card = chk.closest('.item'); if(!card) return;
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
       it.done = chk.checked;
-      if(it.done && it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
-      if(it.done && it.isSleep){
-        STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{};
-        STATE.essentialsChecked[currentDate][0]=true; // 7-9 uur slaap
-        STATE.essentialsChecked[currentDate][6]=true; // Slaaphygiëne
-      }
+      if(it.done) onItemDone(it);
       saveState(); renderAll();
     }
   });
@@ -1505,8 +1891,7 @@ function init(){
     if(tl){
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===tl.dataset.tlid); if(!it) return;
       it.done = tl.checked;
-      if(it.done && it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
-      if(it.done && it.isSleep){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][0]=true; STATE.essentialsChecked[currentDate][6]=true; }
+      if(it.done) onItemDone(it);
       saveState(); renderAll();
     }
   });
@@ -1516,8 +1901,7 @@ function init(){
     const d = e.target.closest('[data-donenow]');
     if(d){
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===d.dataset.donenow); if(!it) return;
-      it.done = true;
-      if(it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
+      it.done = true; onItemDone(it);
       saveState(); renderAll();
     }
   });
@@ -1538,26 +1922,29 @@ function init(){
     const reqToggle = e.target.closest('[data-toggle="required"]');
     if(reqToggle && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.required=!it.required; saveState(); renderAll(); return; }
 
-    const recToggle = e.target.closest('[data-toggle="recurring"]');
-    if(recToggle && card){
-      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id);
-      if(it.locked) return;
-      it.recurring = !it.recurring;
-      if(it.recurring){
-        const tid = uid('tpl'); it.recurringTemplateId = tid;
-        STATE.recurringTemplates.push({ templateId:tid, repeatDays:(it.lockSettings.repeatDays||[]).slice(), data:{
-          type:it.type, title:it.title, why:it.why, tag:it.tag, icon:it.icon, time:it.time, location:it.location,
-          message:it.message, duration:it.duration, required:it.required, isSleep:it.isSleep, windDown:it.windDown, essentialLink:it.essentialLink
-        }});
-      } else {
-        STATE.recurringTemplates = STATE.recurringTemplates.filter(t=>t.templateId!==it.recurringTemplateId);
-        it.recurringTemplateId = null;
-      }
+    const repBtn = e.target.closest('[data-openrepeat]');
+    if(repBtn && card){ const it=getDay(currentDate).items.find(x=>x.id===card.dataset.id); if(it.locked) return; openRepeatModal(card.dataset.id); return; }
+
+    const win = e.target.closest('[data-win]');
+    if(win && card){
+      const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id);
+      const cur = it._view || 'normal';
+      it._view = (cur===win.dataset.win) ? 'normal' : win.dataset.win;
       saveState(); renderAll(); return;
     }
 
-    const expToggle = e.target.closest('[data-toggle="expand"]');
-    if(expToggle && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); it._expanded=!it._expanded; renderAll(); return; }
+    const allDayT = e.target.closest('[data-toggle="allday"]');
+    if(allDayT && card){
+      const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id);
+      if(it.locked) return;
+      it.allDay = !it.allDay;
+      if(it.allDay){ it._timeBefore = it.time; it.time = ''; }
+      else { it.time = it._timeBefore || CONFIG.defaultTimes[it.type] || '09:00'; }
+      saveState(); syncTemplate(it); renderAll(); return;
+    }
+
+    const iconsAll = e.target.closest('[data-iconsall]');
+    if(iconsAll && card){ const it=getDay(currentDate).items.find(x=>x.id===card.dataset.id); it._iconsAll=!it._iconsAll; renderAll(); return; }
 
     const delBtn = e.target.closest('[data-delete]');
     if(delBtn && card){
@@ -1565,8 +1952,9 @@ function init(){
       if(it.locked) return;
       const idx = day.items.findIndex(x=>x.id===card.dataset.id);
       const removed = day.items.splice(idx,1)[0];
+      pushTrash(removed, currentDate);
       saveState(); renderAll();
-      showToast('Verwijderd: '+(removed.title||TYPE_LABEL[removed.type]), ()=>{ day.items.splice(idx,0,removed); saveState(); renderAll(); });
+      showToast('Verwijderd: '+(removed.title||TYPE_LABEL[removed.type])+' — herstel met ↶');
       return;
     }
     const addSub = e.target.closest('[data-addsub]');
@@ -1600,7 +1988,7 @@ function init(){
       const block = STATE.library.find(b=>b.id===addL.dataset.liblibAdd);
       const day = getDay(currentDate); const it = newItem(block.type);
       Object.assign(it, { title:block.title, why:block.why, tag:block.tag, duration:block.duration, icon:block.icon,
-        isSleep:!!block.isSleep, time:block.time||it.time, windDown:block.windDown||60, essentialLink: block.essentialLink!=null?block.essentialLink:null });
+        isSleep:!!block.isSleep, time:block.time||it.time, windDown:block.windDown||60 });
       it.order = day.items.length; day.items.push(it);
       saveState(); renderAll(); showToast('Toegevoegd aan '+fmtDateShort(currentDate)+'.'); return;
     }
@@ -1645,6 +2033,7 @@ function init(){
         const parsed = JSON.parse(reader.result);
         STATE = Object.assign(defaultState(), parsed);
         STATE.settings = Object.assign(defaultState().settings, parsed.settings||{});
+        migrateState();
         saveState(); renderAll(); showToast('Back-up geïmporteerd.');
       }catch(err){ showToast('Kon bestand niet lezen.'); }
     };
@@ -1668,7 +2057,57 @@ function init(){
   // punten essentials
   document.addEventListener('change', e=>{
     const ess = e.target.closest('[data-ess]');
-    if(ess){ const i=+ess.dataset.ess; STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][i]=ess.checked; saveState(); renderPoints(); }
+    if(ess){ setEss(currentDate, ess.dataset.ess, ess.checked); saveState(); renderPoints(); renderCalendarPoints(); renderCtm(); }
+    const pk = e.target.closest('[data-pick]');
+    if(pk && pickDraft){
+      const id = pk.dataset.pick;
+      if(pk.checked){ if(!pickDraft.ids.includes(id) && pickDraft.ids.length<CONFIG.pointsPerWeek) pickDraft.ids.push(id); }
+      else pickDraft.ids = pickDraft.ids.filter(x=>x!==id);
+      renderPoints();
+    }
+  });
+  document.addEventListener('click', e=>{
+    const ec = e.target.closest('[data-esscount]');
+    if(ec){
+      const id = ec.dataset.esscount; const raw = essVal(currentDate,id);
+      let n = typeof raw==='number' ? raw : (raw?2:0); n = (n+1)%3;
+      setEss(currentDate, id, n); saveState(); renderPoints(); renderCalendarPoints(); renderCtm(); return;
+    }
+    if(e.target.id==='btnLockWeek' && pickDraft && pickDraft.ids.length===CONFIG.pointsPerWeek){
+      STATE.weekSelections[pickDraft.wk] = pickDraft.ids.slice(); pickDraft=null; saveState(); renderAll(); showToast('Essentials vastgezet voor deze week.'); return;
+    }
+    if(e.target.id==='btnEditPool'){ renderPoolModal(); openOverlay('poolModal'); return; }
+    const arch = e.target.closest('[data-poolarchive]');
+    if(arch){ const p=STATE.essentialPool.find(x=>x.id===arch.dataset.poolarchive); if(p) p.archived=true; if(pickDraft) pickDraft.ids=pickDraft.ids.filter(x=>x!==arch.dataset.poolarchive); saveState(); renderPoolModal(); renderPoints(); return; }
+    if(e.target.id==='btnPoolAdd'){
+      const name = ($('#poolNewName').value||'').trim(); if(!name) return;
+      STATE.essentialPool.push({ id:uid('ess'), name }); saveState(); renderPoolModal(); renderPoints(); return;
+    }
+    // Capture the moment
+    if(e.target.closest('#ctmToggle')){ ctmOpen=!ctmOpen; if(!ctmOpen){ctmKind=null;ctmChoice=null;} renderCtm(); return; }
+    const ck = e.target.closest('[data-ctmkind]');
+    if(ck){ ctmKind = (ctmKind===ck.dataset.ctmkind)?null:ck.dataset.ctmkind; ctmChoice=null; renderCtm(); return; }
+    const cc = e.target.closest('[data-ctmchoice]');
+    if(cc){ ctmChoice = (ctmChoice===cc.dataset.ctmchoice)?null:cc.dataset.ctmchoice; const t=$('#ctmText')?$('#ctmText').value:''; const r=$('#ctmReason')?$('#ctmReason').value:''; renderCtm(); if($('#ctmText')) $('#ctmText').value=t; if($('#ctmReason')) $('#ctmReason').value=r; return; }
+    if(e.target.id==='btnCtmSave'){
+      const own = ($('#ctmText').value||'').trim(); const reason = ($('#ctmReason').value||'').trim();
+      let text = ctmChoice || '';
+      if(ctmKind==='craving') text = ctmChoice ? ('Craving · '+ctmChoice.toLowerCase()) : 'Craving';
+      if(own) text = text ? (text+' — '+own) : own;
+      if(!text){ showToast('Kies of typ eerst iets.'); return; }
+      STATE.log[currentDate] = STATE.log[currentDate] || [];
+      STATE.log[currentDate].push({ id:uid('log'), time: currentDate===todayISO()?nowHHMM():'', kind:ctmKind, text, reason });
+      ctmKind=null; ctmChoice=null; saveState(); renderCtm(); showToast('Vastgelegd.'); return;
+    }
+    const cd = e.target.closest('[data-ctmdel]');
+    if(cd){ STATE.log[currentDate] = (STATE.log[currentDate]||[]).filter(x=>x.id!==cd.dataset.ctmdel); saveState(); renderCtm(); return; }
+    // ?-uitleg, dagdoel (Live), kalenderweergave, herstel
+    const hb = e.target.closest('[data-help]');
+    if(hb){ const k=hb.dataset.help; openHelp[k]=!openHelp[k]; const el=$('#help-'+k); if(el) el.classList.toggle('open', !!openHelp[k]); return; }
+    if(e.target.id==='btnDagdoel'){ liveDagdoelOpen=!liveDagdoelOpen; renderIntentBox(peekDay(currentDate)); return; }
+    const cv = e.target.closest('[data-calview]');
+    if(cv){ STATE.settings.calView = cv.dataset.calview; saveState(); renderCalendar(); return; }
+    if(e.target.closest('#btnUndo')){ undoLast(); return; }
   });
 
   // dag-afsluiting
@@ -1688,7 +2127,9 @@ function init(){
 
   // lock modal
   document.addEventListener('click', e=>{
-    const dayBtn = e.target.closest('[data-lockday]'); if(dayBtn){ dayBtn.classList.toggle('on'); return; }
+    const dayBtn = e.target.closest('[data-repday]'); if(dayBtn){ dayBtn.classList.toggle('on'); return; }
+    if(e.target.id==='btnSaveRepeat'){ saveRepeatFromModal(); }
+    if(e.target.id==='btnStopRepeat'){ stopRepeatFromModal(); }
     if(e.target.id==='btnSaveLock'){ saveLockFromModal(); }
     if(e.target.id==='btnUnlock'){ unlockFromModal(); }
   });
@@ -1749,43 +2190,104 @@ function init(){
   }
 }
 
-/* ---------- lock modal ---------- */
+/* ---------- afvinken: slaap voedt Essentials (als die deze week gekozen zijn) ---------- */
+function onItemDone(it){
+  if(it.isSleep){
+    const sel = proposedSelection(currentDate);
+    ['e0','e6'].forEach(id=>{ if(sel.includes(id)) setEss(currentDate, id, true); });
+  }
+}
+
+/* ---------- herstelknop: laatste 3 verwijderde items, 24 uur geldig ---------- */
+const TRASH_MAX = 3, TRASH_HOURS = 24;
+function purgeTrash(){
+  const cutoff = Date.now() - TRASH_HOURS*3600*1000;
+  STATE.trash = (STATE.trash||[]).filter(t=>t.deletedAt >= cutoff).slice(-TRASH_MAX);
+}
+function pushTrash(item, date){
+  purgeTrash();
+  STATE.trash.push({ item: JSON.parse(JSON.stringify(item)), date, deletedAt: Date.now() });
+  STATE.trash = STATE.trash.slice(-TRASH_MAX);
+}
+function undoLast(){
+  purgeTrash();
+  const t = STATE.trash.pop();
+  if(!t){ updateUndoBtn(); return; }
+  const day = getDay(t.date);
+  if(!day.items.find(x=>x.id===t.item.id)) day.items.push(t.item);
+  saveState(); currentDate = t.date; renderAll();
+  showToast('Hersteld: '+(t.item.title||TYPE_LABEL[t.item.type]));
+}
+function updateUndoBtn(){
+  const b = $('#btnUndo'); if(!b) return;
+  purgeTrash();
+  b.disabled = STATE.trash.length===0;
+  b.title = STATE.trash.length ? ('Herstel laatst verwijderde ('+STATE.trash.length+')') : 'Niets te herstellen';
+}
+
+/* ---------- ∞ = herhalen (dagen + tijd) ---------- */
+let repeatTargetId = null;
+function openRepeatModal(itemId){
+  repeatTargetId = itemId;
+  const it = getDay(currentDate).items.find(x=>x.id===itemId);
+  const days = (it.recurring && it.recurringTemplateId)
+    ? ((STATE.recurringTemplates.find(t=>t.templateId===it.recurringTemplateId)||{}).repeatDays || [])
+    : (it.lockSettings.repeatDays||[]);
+  $('#repeatBody').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${it.recurring?'Dit item herhaalt.':'Dit item herhaalt nog niet.'}</div>
+    <label style="font-size:10px;color:var(--muted)">Herhaaldagen (leeg = elke dag)</label>
+    <div class="lockGrid">${WEEKDAYS_MON0.map((d,i)=>`<button data-repday data-dayidx="${i}" class="${days.includes(i)?'on':''}">${d}</button>`).join('')}</div>
+    ${it.allDay?'':`<label style="font-size:10px;color:var(--muted);margin-top:8px;display:block">Tijd</label>
+    <input type="time" id="repeatTime" value="${it.time||''}" style="border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">`}
+    <div class="detailActions">
+      <button id="btnSaveRepeat">${it.recurring?'Opslaan':'Herhalen aanzetten'}</button>
+      ${it.recurring?'<button id="btnStopRepeat">Herhalen uitzetten</button>':''}
+    </div>`;
+  openOverlay('repeatModal');
+}
+function saveRepeatFromModal(){
+  const it = getDay(currentDate).items.find(x=>x.id===repeatTargetId); if(!it) return;
+  const days = $all('#repeatBody [data-repday].on').map(b=>+b.dataset.dayidx);
+  const tm = $('#repeatTime'); if(tm && tm.value) it.time = tm.value;
+  it.lockSettings.repeatDays = days.slice();
+  if(!it.recurring){
+    it.recurring = true; it.recurringTemplateId = uid('tpl');
+    STATE.recurringTemplates.push({ templateId:it.recurringTemplateId, repeatDays:days.slice(), data:{} });
+  } else {
+    const t = STATE.recurringTemplates.find(x=>x.templateId===it.recurringTemplateId);
+    if(t) t.repeatDays = days.slice();
+  }
+  syncTemplate(it);
+  saveState(); closeOverlay('repeatModal'); renderAll();
+}
+function stopRepeatFromModal(){
+  const it = getDay(currentDate).items.find(x=>x.id===repeatTargetId); if(!it) return;
+  STATE.recurringTemplates = STATE.recurringTemplates.filter(t=>t.templateId!==it.recurringTemplateId);
+  it.recurring = false; it.recurringTemplateId = null;
+  saveState(); closeOverlay('repeatModal'); renderAll();
+}
+
+/* ---------- stipje = vergrendelen (alleen dat) ---------- */
 let lockTargetId = null;
 function openLockModal(itemId){
   lockTargetId = itemId;
-  const day = getDay(currentDate);
-  const it = day.items.find(x=>x.id===itemId);
+  const it = getDay(currentDate).items.find(x=>x.id===itemId);
   $('#lockBody').innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${it.locked ? 'Vergrendeld — niets kan gewijzigd of verwijderd worden tot ontgrendelen (ook niet via toetsenbord). Afvinken blijft wel kunnen.' : 'Nog niet vergrendeld. Herhaaldagen/tijd hieronder gelden ook voor ∞ Herhalend.'}</div>
-    <label style="font-size:10px;color:var(--muted)">Herhaaldagen (leeg = elke dag)</label>
-    <div class="lockGrid">${WEEKDAYS_MON0.map((d,i)=>`<button data-lockday data-dayidx="${i}" class="${(it.lockSettings.repeatDays||[]).includes(i)?'on':''}">${d}</button>`).join('')}</div>
-    <label style="font-size:10px;color:var(--muted);margin-top:8px;display:block">Tijd</label>
-    <input type="time" id="lockTime" value="${it.lockSettings.repeatTime||''}" style="border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${it.locked
+      ? 'Vergrendeld — dit item kan niet gewijzigd of verwijderd worden tot je het ontgrendelt. Afvinken kan wel.'
+      : 'Vergrendel dit item om het te beschermen tegen per ongeluk aanpassen of verwijderen. Afvinken blijft kunnen.'}</div>
     <div class="detailActions">
-      <button id="btnSaveLock">${it.locked?'Herhaling opslaan':'Vergrendelen & opslaan'}</button>
-      ${it.locked?'<button id="btnUnlock">Ontgrendelen</button>':''}
-    </div>
-  `;
+      ${it.locked?'<button id="btnUnlock">Ontgrendelen</button>':'<button id="btnSaveLock">Vergrendelen</button>'}
+    </div>`;
   openOverlay('lockModal');
 }
 function saveLockFromModal(){
-  const day = getDay(currentDate);
-  const it = day.items.find(x=>x.id===lockTargetId);
-  const dayButtons = $all('#lockBody [data-lockday].on');
-  it.lockSettings.repeatDays = dayButtons.map(b=>+b.dataset.dayidx);
-  it.lockSettings.repeatTime = $('#lockTime').value;
-  it.locked = true;
-  if(it.recurring && it.recurringTemplateId){
-    const t = STATE.recurringTemplates.find(x=>x.templateId===it.recurringTemplateId);
-    if(t) t.repeatDays = it.lockSettings.repeatDays.slice();
-  }
-  saveState(); closeOverlay('lockModal'); renderAll();
+  const it = getDay(currentDate).items.find(x=>x.id===lockTargetId);
+  it.locked = true; saveState(); closeOverlay('lockModal'); renderAll();
 }
 function unlockFromModal(){
-  const day = getDay(currentDate);
-  const it = day.items.find(x=>x.id===lockTargetId);
-  it.locked = false;
-  saveState(); closeOverlay('lockModal'); renderAll();
+  const it = getDay(currentDate).items.find(x=>x.id===lockTargetId);
+  it.locked = false; saveState(); closeOverlay('lockModal'); renderAll();
 }
 
 /* =====================================================================

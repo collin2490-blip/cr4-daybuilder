@@ -4,7 +4,7 @@
  * daarna volledig offline werkt. Geen externe afhankelijkheden, geen
  * push-infrastructuur — alleen offline-cache + installeerbaarheid.
  */
-const CACHE_NAME = 'cr4-daybuilder-v1.3';
+const CACHE_NAME = 'cr4-daybuilder-v1.4';
 const ASSETS = [
   './',
   './index.html',
@@ -31,6 +31,21 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  // v1.4: de app-pagina zelf eerst via het netwerk (als er verbinding is),
+  // zodat een nieuwe versie meteen binnenkomt bij één keer openen online.
+  // Geen verbinding -> gewoon de opgeslagen versie (volledig offline).
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
