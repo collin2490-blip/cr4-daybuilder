@@ -1,0 +1,84 @@
+CR.4 DAYBUILDER v1.2 — INSTALLATIE OP JE IPHONE
+=================================================
+
+Deze map bevat een complete, offline werkende app (index.html +
+manifest.json + service-worker.js + icoontjes). Je zet hem één keer
+gratis online, opent hem daarna op je iPhone, en installeert hem op
+je beginscherm. Daarna werkt hij volledig offline, net als een
+normale app.
+
+Belangrijk: al je gegevens (dagen, items, punten, instellingen)
+blijven ALLEEN op je eigen telefoon staan, in de opslag van je
+browser/app. Er wordt niets naar een server gestuurd — het online
+zetten van de map is alleen nodig om de app zelf (de bestanden) op
+je telefoon te krijgen, niet je gegevens.
+
+
+STAP 1 — De map één keer gratis online zetten
+-----------------------------------------------
+
+Kies één van de twee onderstaande opties. Beide zijn gratis en je
+hebt er geen technische kennis voor nodig.
+
+OPTIE A — Netlify Drop (makkelijkst, geen account nodig)
+  1. Ga op je computer naar: app.netlify.com/drop
+  2. Sleep deze hele map ("CR.4 Daybuilder v1.2") in het vak op die
+     pagina.
+  3. Na een paar seconden krijg je een link, bijvoorbeeld
+     https://iets-willekeurigs.netlify.app
+  4. Die link gebruik je in stap 2.
+
+OPTIE B — GitHub Pages (iets meer stappen, handig als je al een
+GitHub-account hebt of later updates wilt kunnen doorvoeren)
+  1. Maak een nieuwe (gratis) repository aan op github.com, bijv.
+     "daybuilder".
+  2. Upload alle bestanden uit deze map (index.html, manifest.json,
+     service-worker.js, icon-192.png, icon-512.png) naar die
+     repository.
+  3. Ga naar Settings → Pages, zet "Deploy from branch" aan op de
+     hoofdbranch, map "/" (root).
+  4. Na een minuutje krijg je een link, bijvoorbeeld
+     https://jouwnaam.github.io/daybuilder/
+  5. Die link gebruik je in stap 2.
+
+
+STAP 2 — Op de iPhone installeren
+-----------------------------------
+
+  1. Open de link uit stap 1 in Safari op je iPhone (moet Safari
+     zijn, niet Chrome — alleen Safari kan op iPhone apps op het
+     beginscherm zetten).
+  2. Tik onderin op het Deel-icoon (vierkantje met pijltje omhoog).
+  3. Scroll naar beneden en tik op "Zet op beginscherm".
+  4. Geef hem eventueel een kortere naam en tik op "Voeg toe".
+  5. Klaar — er staat nu een icoontje op je beginscherm. Open de app
+     daarmee (niet meer via Safari) voor de volle schermervaring.
+
+Na de eerste keer openen (met internet) heeft de app alles wat hij
+nodig heeft lokaal opgeslagen. Daarna kun je hem ook zonder internet
+gebruiken — zet gerust het vliegtuigmodus-testje aan om dat te
+checken.
+
+
+BACK-UPS
+--------
+
+Ga in de app naar het kompas-icoon niet, maar naar het tandwiel
+(instellingen, rechtsboven) → "Back-up". Daar kun je op elk moment:
+  - Exporteren: slaat al je data op als één .json-bestandje
+    (handig om te bewaren, bijvoorbeeld in je e-mail of iCloud
+    Drive, voor als je ooit een nieuw toestel hebt).
+  - Importeren: haalt een eerder geëxporteerd .json-bestand terug in
+    de app.
+
+De app herinnert je er zelf (rustig, wegklikbaar) aan als het langer
+dan een paar dagen geleden is sinds je laatste export.
+
+
+OVERSTAPPEN VANUIT EEN OUDERE VERSIE (v1.1)
+--------------------------------------------
+
+Open eerst de oude versie, exporteer daar je data (instellingen →
+Exporteren), en importeer dat bestand hier in v1.2 (instellingen →
+Importeren). Zo neem je al je dagen, library-blokken en instellingen
+gewoon mee.

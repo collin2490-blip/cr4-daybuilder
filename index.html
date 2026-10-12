@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>CR.4 Daybuilder v1.2 — pilot</title>
+
+<!-- PWA: installeerbaar + offline (zie LEESMIJ.txt voor installatie) -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Daybuilder">
+<meta name="theme-color" content="#6b7a8f">
+
+<!--
+=====================================================================
+ VERBORGEN INSTRUCTIES / APP-FEATURES — NIET BOUWBAAR IN LOS HTML-BESTAND
+=====================================================================
+ 1. "Nieuwe dag maken -> nieuwe tab" bij uploaden. Vervangen door de
+    datum-navigatie + weekstrip/maandkalender in de Kalender-tab.
+ 2. Upload van een agenda-screenshot -> automatisch items aanmaken.
+    Vereist beeldherkenning (vision/OCR) + backend. Niet mogelijk
+    offline in los HTML. De Kalender-tijdlijn is qua STRUCTUUR
+    gemodelleerd naar de meegeleverde schoolagenda-screenshot
+    (genummerde blokken, tijd + locatie, nu-lijntje).
+ 3. Echte swipe-gestures i.p.v. tabs.
+ 4. Kalender-API-koppeling (Google/Outlook).
+ 5. Echte push-/systeemmeldingen voor de countdown en de
+    slaap-afbouwmelding. Dit bestand toont die meldingen alleen
+    passief ZOLANG de pagina open/zichtbaar is in de browser/app.
+ 6. v1.2 heeft nu wel een service worker (offline cache + installeer-
+    baar), maar dat is geen pushmeldingen-infrastructuur — daarvoor
+    is een server/push-service nodig.
+=====================================================================
+-->
+
+<style>
+/* =====================================================================
+   HUISSTIJL — klein, rustig, kalm. Kleur alleen als klein accent.
+   ===================================================================== */
+:root{
+  --bg:#f5f4f0;
+  --panel:#ffffff;
+  --panel-alt:#faf9f6;
+  --ink:#2a2d31;
+  --muted:#8b8f97;
+  --faint:#c3c6cc;
+  --line:#e6e4de;
+  --accent:#6b7a8f;
+  --good:#7f9b7a;
+  --warn:#c9a24b;
+  --bad:#b6615a;
+  --neutral:#b7bbc2;
+  --r:10px;
+  --r-sm:6px;
+  --shadow:0 2px 10px rgba(30,30,25,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit}
+#app{max-width:640px;margin:0 auto;padding:10px 10px 74px;min-height:100vh;position:relative}
+
+header#topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 2px 8px}
+.dateNav{display:flex;align-items:center;gap:4px}
+.dateNav button.navBtn{border:1px solid var(--line);background:var(--panel);border-radius:999px;width:20px;height:20px;font-size:11px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dateLabel{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 9px;font-size:10px;font-weight:800;color:var(--ink);cursor:pointer}
+.iconRow{display:flex;gap:4px;margin-left:auto}
+.iconBtn{border:1px solid var(--line);background:var(--panel);border-radius:999px;width:26px;height:26px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+.iconBtn:hover{background:var(--panel-alt)}
+
+nav.tabbar{display:flex;gap:4px;margin:2px 0 10px;padding:3px;background:var(--panel-alt);border:1px solid var(--line);border-radius:999px}
+nav.tabbar .tab{flex:1;border:0;background:transparent;border-radius:999px;padding:6px 4px;font-size:11px;font-weight:800;color:var(--muted);cursor:pointer}
+nav.tabbar .tab.active{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+
+.view{display:none}
+.view.active{display:block}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+.sectionLabel{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:800;margin:0 0 6px;display:flex;align-items:center;gap:6px}
+
+.framing{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.framing .full{grid-column:1/-1}
+.framing label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px}
+.framing input[type=text],.framing select{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 7px;font-size:12px;background:var(--panel-alt);color:var(--ink)}
+.guardNote{font-size:10px;color:var(--faint);margin-top:5px;font-style:italic}
+
+/* groene plus-knop + toevoeg-menu (vervangt de rij losse knoppen) */
+.addFab{border:0;background:var(--good);color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;flex:none}
+.addFab:hover{filter:brightness(.95)}
+.addMenuPopup{position:absolute;right:10px;top:40px;z-index:45;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 14px 34px rgba(0,0,0,.16);padding:6px;width:180px}
+.addMenuPopup button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;border-radius:6px}
+.addMenuPopup button:hover{background:var(--panel-alt)}
+.addMenuPopup .soft{background:#f1efe9;border-radius:8px;margin-top:4px;padding:2px}
+.addMenuPopup .soft button{color:var(--muted);font-weight:600}
+
+/* item card — compacter, bediening rechts, meer/minder rechtsboven */
+.item{position:relative;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel-alt);margin-bottom:6px;overflow:hidden}
+.item.carried{border-color:#d8cfa9}
+.item.locked{opacity:.92}
+.item.locked .titleInput,.item.locked .motifLine{opacity:.65}
+.item .expandBtn{position:absolute;top:6px;right:8px;border:0;background:transparent;color:var(--faint);font-size:10px;cursor:pointer}
+.item .row1{display:flex;align-items:flex-start;gap:6px;padding:7px 30px 5px 8px}
+.item .reorder{display:flex;flex-direction:column;gap:0;width:11px}
+.item .reorder button{border:0;background:transparent;color:var(--faint);font-size:9px;cursor:pointer;line-height:1.1;padding:1px}
+.item input[type=checkbox].done{margin-top:3px;width:14px;height:14px;accent-color:var(--good);flex:none}
+.item .main{flex:1;min-width:0}
+.item .titleRow{display:flex;align-items:center;gap:5px}
+.item .iconGlyph{font-size:12px;flex:none}
+.item input.titleInput{width:100%;border:0;background:transparent;font-size:13px;font-weight:700;color:var(--ink);padding:0}
+.item input.titleInput:focus{outline:none}
+.item.isdone .titleInput{color:var(--faint);text-decoration:line-through}
+.motifRow{margin-top:1px}
+.motifArrow{border:0;background:transparent;color:var(--faint);font-size:10px;cursor:pointer;padding:0}
+.motifInput{width:100%;border:1px solid var(--line);background:#f3f1ec;border-radius:5px;padding:3px 5px;font-size:11px;font-style:italic;color:var(--ink)}
+.motifLine{font-size:11px;color:var(--muted);font-style:italic;cursor:text}
+.messageLine{font-size:10px;color:var(--accent);margin-top:2px}
+
+.item .meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px;padding:0 8px 7px}
+.tagChip select{border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:10px;padding:2px 6px;color:var(--ink);max-width:110px}
+.tagDot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px}
+.durBadge{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 7px;background:var(--panel)}
+.timeBadge{font-size:10px;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:2px 7px;background:var(--panel);font-weight:800}
+.reqChip{font-size:9px;border:1px dashed var(--line);border-radius:999px;padding:2px 6px;color:var(--faint);cursor:pointer;background:transparent}
+.reqChip.on{border-style:solid;border-color:var(--bad);color:var(--bad)}
+.ctrlCluster{display:flex;align-items:center;gap:4px;margin-left:auto}
+.infBtn{border:0;background:transparent;font-size:12px;color:var(--faint);cursor:pointer;line-height:1}
+.infBtn.on{color:var(--accent)}
+.infBtn:disabled,.lockBtn:disabled{opacity:.4;cursor:default}
+.lockBtn{border:0;background:transparent;cursor:pointer;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center}
+.lockBtn .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#cfd2d6;transition:all .15s}
+.lockBtn.on .dot{width:9px;height:9px;background:#fff;box-shadow:0 0 6px 2px rgba(255,255,255,.95),0 0 0 1px #c9cdd3}
+.delBtn{border:0;background:transparent;color:var(--faint);font-size:13px;cursor:pointer;line-height:1}
+.delBtn:disabled{opacity:.3;cursor:default}
+
+.item .detail{display:none;border-top:1px solid var(--line);padding:8px;background:var(--panel)}
+.item.expanded .detail{display:block}
+.item .detail label{display:block;font-size:10px;color:var(--muted);margin:6px 0 2px}
+.item .detail textarea,.item .detail input[type=text]{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 7px;font-size:12px}
+.item .detail textarea{min-height:40px;resize:vertical}
+.item .detail input:disabled,.item .detail textarea:disabled,.item .detail select:disabled,
+.item .detail input[readonly],.item .detail textarea[readonly]{background:#eeece6;color:var(--muted);cursor:not-allowed}
+.subtask{display:flex;align-items:center;gap:5px;margin:3px 0}
+.subtask input[type=text]{flex:1;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:11px}
+.subtask button{border:0;background:transparent;color:var(--faint);font-size:12px;cursor:pointer}
+.subtask button:disabled{opacity:.3;cursor:default}
+.rangeRow{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px}
+.rangeRow input[type=range]{flex:1;accent-color:var(--accent)}
+.detailActions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.detailActions button{border:1px solid var(--line);background:var(--panel-alt);border-radius:999px;padding:4px 9px;font-size:10px;cursor:pointer;color:var(--ink)}
+.detailActions button:disabled{opacity:.4;cursor:default}
+.iconPick{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.iconPick button{border:1px solid var(--line);background:var(--panel);border-radius:6px;width:24px;height:24px;font-size:12px;cursor:pointer}
+.iconPick button.on{border-color:var(--accent);background:var(--panel-alt)}
+.iconPick button:disabled{opacity:.4;cursor:default}
+
+/* live view */
+.nowStack{display:flex;flex-direction:column;gap:6px}
+.nowSide{opacity:.7;padding:7px 10px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel-alt)}
+.nowSide b{color:var(--ink);font-weight:700}
+.nowCurrent{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:18px 14px;box-shadow:var(--shadow);text-align:center}
+.nowCurrent .cur-eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800}
+.nowCurrent .cur-title{font-size:19px;font-weight:800;color:var(--ink);margin-top:4px}
+.nowCurrent .cur-why{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px}
+.nowCurrent .cur-msg{font-size:11px;color:var(--accent);margin-top:4px}
+.nowCurrent .cur-meta{margin-top:9px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.nowCurrent .cur-done{margin-top:12px;border:1px solid var(--good);color:var(--good);background:transparent;border-radius:999px;padding:7px 18px;font-size:12px;font-weight:800;cursor:pointer}
+.countdown{font-size:10px;color:var(--faint);margin-top:6px}
+.allDoneMsg{text-align:center;padding:20px 10px;color:var(--muted);font-size:12px}
+.reflectRow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.reflectBtn{position:relative;overflow:hidden;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:8px;font-size:11px;text-align:center;cursor:pointer;color:var(--muted)}
+.reflectBtn.active{border-color:var(--accent);color:var(--ink);background:var(--panel-alt);font-weight:700}
+.sleepBanner{font-size:11px;color:var(--accent);background:var(--panel-alt);border:1px dashed var(--line);border-radius:999px;padding:6px 10px;text-align:center;margin-bottom:8px}
+.backupReminder{font-size:10px;color:var(--muted);background:var(--panel-alt);border:1px dashed var(--line);border-radius:999px;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.backupReminder a{color:var(--accent);cursor:pointer;text-decoration:underline}
+.backupReminder button{border:0;background:transparent;color:var(--faint);font-size:12px;cursor:pointer;margin-left:8px}
+
+.statusLine{display:flex;align-items:center;font-size:11px;color:var(--muted)}
+.statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;flex:none}
+
+/* panels / modals */
+.overlayBg{position:fixed;inset:0;background:rgba(30,28,24,.28);z-index:40}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,92vw);background:var(--panel);box-shadow:-8px 0 24px rgba(0,0,0,.14);z-index:50;overflow-y:auto;padding:12px}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:86vh;overflow-y:auto;background:var(--panel);border-radius:var(--r);box-shadow:0 20px 50px rgba(0,0,0,.28);z-index:55;padding:14px}
+.hidden{display:none!important}
+.panelHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.panelHead .t{font-size:12px;font-weight:800}
+.closeX{border:0;background:transparent;font-size:16px;color:var(--muted);cursor:pointer}
+
+.libCatHead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin:10px 0 4px}
+.libCatTitle{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:800}
+.libCatArrow{font-size:10px;color:var(--faint)}
+.libItem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--r-sm);padding:7px;margin-bottom:6px;background:var(--panel-alt)}
+.libIcon{font-size:15px;flex:none}
+.libItem .t{font-size:12px;font-weight:700}
+.libItem .w{font-size:10px;color:var(--muted);font-style:italic}
+.libItem .actions{margin-left:auto;display:flex;gap:4px}
+.libItem button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 9px;font-size:10px;cursor:pointer}
+
+.energyCat{margin-bottom:8px}
+.energyCat .catTitle{font-size:11px;font-weight:800;color:var(--accent);margin-bottom:4px}
+.energyRow{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.scorePip{font-size:10px;color:var(--muted)}
+.deescStep{font-size:11px;padding:4px 0;border-bottom:1px dashed var(--line);display:flex;gap:6px}
+.deescStep b{color:var(--accent);font-size:10px}
+.quote{font-size:11px;font-style:italic;color:var(--ink);background:var(--panel-alt);border-left:2px solid var(--accent);padding:6px 8px;border-radius:0 6px 6px 0;margin:4px 0}
+.moodTrailRow{display:flex;align-items:center;gap:6px;margin-top:4px}
+.moodTrail{display:flex;gap:3px}
+.moodDot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.legendArrow{border:0;background:transparent;color:var(--faint);font-size:10px;cursor:pointer}
+.legendBox{display:none;margin-top:6px;font-size:10px;color:var(--muted)}
+.legendBox.open{display:block}
+.legendRow{display:flex;align-items:center;gap:5px;padding:2px 0}
+.legendDot{width:8px;height:8px;border-radius:50%;flex:none}
+
+.meter{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0 10px}
+.meterBox{width:12px;height:9px;border-radius:2px;border:1px solid var(--line);background:var(--panel-alt)}
+.meterBox.on{background:var(--good);border-color:var(--good)}
+.essItem{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.essItem input{accent-color:var(--good)}
+.pointsWeek{display:flex;gap:4px;margin-top:10px}
+.pointsWeekCol{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.pointsWeekBar{width:100%;height:30px;background:var(--panel-alt);border:1px solid var(--line);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden}
+.pointsWeekBar i{display:block;width:100%;background:var(--good)}
+.pointsWeekLbl{font-size:8px;color:var(--faint)}
+
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:7px 12px;font-size:11px;display:flex;gap:10px;align-items:center;z-index:70}
+.toast button{border:0;background:transparent;color:#bcd;cursor:pointer;font-size:11px;font-weight:800}
+
+#ankerBtn{position:fixed;right:14px;bottom:14px;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);font-size:16px;cursor:pointer;z-index:30}
+
+.tipLine{font-size:11px;color:var(--muted);background:var(--panel-alt);border:1px dashed var(--line);border-radius:999px;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;cursor:pointer}
+
+.feelGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.feelBtn{border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:10px 6px;font-size:12px;text-align:center;cursor:pointer}
+.feelBtn:hover{background:var(--panel-alt)}
+
+.chklist{margin-top:4px}
+.chkrow{display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0}
+
+.lockGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:4px}
+.lockGrid button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 0;font-size:10px;cursor:pointer}
+.lockGrid button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* kalender */
+.weekStrip{display:flex;justify-content:space-between;margin-bottom:6px}
+.weekDay{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 2px;border-radius:8px;cursor:pointer}
+.weekDay.today{background:var(--panel-alt);border:1px solid var(--accent)}
+.weekDay .wd{font-size:9px;color:var(--faint);text-transform:uppercase}
+.weekDay .wn{font-size:12px;font-weight:700}
+.weekDay .wdot{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.monthLabelBtn{border:0;background:transparent;color:var(--ink);font-size:11px;font-weight:700;padding:3px 6px;border-radius:6px;cursor:pointer}
+.monthLabelBtn:hover{background:var(--panel-alt)}
+.monthPopup{position:absolute;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 14px 34px rgba(0,0,0,.16);padding:10px;width:260px}
+.monthGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:6px}
+.monthCell{text-align:center;font-size:10px;padding:5px 0;border-radius:6px;cursor:pointer;position:relative}
+.monthCell.today{border:1px solid var(--accent)}
+.monthCell .pdot{width:3px;height:3px;border-radius:50%;background:var(--accent);margin:1px auto 0}
+.timelineWrap{position:relative}
+.tlRow{display:flex;align-items:flex-start;gap:6px;padding:8px 2px;border-bottom:1px dashed var(--line)}
+.tlRow.dragOver{background:var(--panel-alt);border-radius:6px}
+.tlRow.dragging{opacity:.4}
+.tlHandle{cursor:grab;touch-action:none;color:var(--faint);font-size:11px;padding:2px 2px;margin-top:2px;user-select:none}
+.tlNum{width:20px;height:20px;border-radius:5px;background:var(--panel-alt);border:1px solid var(--line);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.tlBody{flex:1;min-width:0}
+.tlTitle{font-size:12px;font-weight:700}
+.tlTitle.isdone{color:var(--faint);text-decoration:line-through}
+.tlMeta{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tlTimeInput{border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:10px;padding:1px 6px;color:var(--ink);font-weight:700}
+.tlCheck{margin-top:2px}
+.nowLine{position:absolute;left:0;right:0;height:1px;background:var(--bad);z-index:2}
+.nowLine::before{content:"";position:absolute;left:-2px;top:-2px;width:5px;height:5px;border-radius:50%;background:var(--bad)}
+.closingRow{margin-top:6px}
+.ratingRow{display:flex;gap:4px;margin-top:4px}
+.ratingRow button{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 0;font-size:12px;cursor:pointer}
+.ratingRow button.on{border-color:var(--accent);background:var(--panel-alt);font-weight:800}
+
+footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
+
+@media(min-width:720px){#app{max-width:760px}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header id="topbar">
+    <div class="dateNav">
+      <button class="navBtn" id="btnPrevDay" title="Vorige dag">‹</button>
+      <button class="dateLabel" id="btnToday" title="Naar vandaag"></button>
+      <button class="navBtn" id="btnNextDay" title="Volgende dag">›</button>
+    </div>
+    <div class="iconRow">
+      <button class="iconBtn" id="btnTerug" title="Terug op koers">🧭</button>
+      <button class="iconBtn" id="btnSettings" title="Instellingen">⚙</button>
+    </div>
+  </header>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab" data-view="builder">Bouwen</button>
+    <button class="tab active" data-view="live">Live</button>
+    <button class="tab" data-view="calendar">Kalender</button>
+    <button class="tab" id="tabPoints" data-view="points">Punten</button>
+  </nav>
+
+  <main id="main">
+
+    <!-- ================= LIVE ================= -->
+    <section id="view-live" class="view active">
+      <div class="statusLine" style="margin-bottom:6px"><span class="statusDot" id="liveStatusDot"></span><span id="liveStatusText"></span></div>
+      <div id="backupReminderBox"></div>
+      <div id="sleepBannerBox"></div>
+      <div class="nowStack">
+        <div class="nowSide" id="nowPrev"></div>
+        <div class="nowCurrent" id="nowCurrentBox"></div>
+        <div class="nowSide" id="nowNext"></div>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <div class="sectionLabel">Mini-reflectie — 1 tik</div>
+        <div class="reflectRow" id="reflectRow"></div>
+      </div>
+    </section>
+
+    <!-- ================= BOUWEN ================= -->
+    <section id="view-builder" class="view">
+      <div class="card">
+        <div class="sectionLabel">Framing — intentie voor vandaag</div>
+        <div class="framing" id="framingBox"></div>
+        <div class="guardNote">Toon = balans, nooit druk.</div>
+      </div>
+
+      <div class="card" style="position:relative">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="sectionLabel" style="margin:0">Onderdelen</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="iconBtn" id="btnLibraryInline" title="Library">📖</button>
+            <button class="addFab" id="btnAddMenu" title="Toevoegen">+</button>
+          </div>
+        </div>
+        <div id="addMenuPopup" class="addMenuPopup hidden"></div>
+        <div id="builderList"></div>
+      </div>
+    </section>
+
+    <!-- ================= KALENDER ================= -->
+    <section id="view-calendar" class="view">
+      <div class="card" style="position:relative">
+        <div class="weekStrip" id="weekStrip"></div>
+        <div class="moodTrailRow" style="margin-top:4px">
+          <span class="sectionLabel" style="margin:0">Weekstemming</span>
+          <button class="legendArrow" data-legend="calLegend">legenda ▾</button>
+        </div>
+        <div class="legendBox" id="calLegend"></div>
+        <div id="monthPopup" class="monthPopup hidden"></div>
+      </div>
+
+      <div class="tipLine" id="terugTip"><span>Vastgelopen?</span><span>›</span></div>
+
+      <div class="card">
+        <div class="sectionLabel"><span class="statusLine"><span class="statusDot" id="statusDot"></span><span id="statusText">Status</span></span></div>
+        <div class="timelineWrap" id="dayTimeline"></div>
+      </div>
+
+      <div class="card">
+        <div class="sectionLabel">Dag afsluiten</div>
+        <div id="closingBox"></div>
+      </div>
+    </section>
+
+    <!-- ================= PUNTEN ================= -->
+    <section id="view-points" class="view">
+      <div class="card" id="pointsCard"></div>
+    </section>
+
+  </main>
+
+  <button id="ankerBtn" title="Anker — ik loop even vast">⚓</button>
+
+  <footer class="tiny">CR.4 Daybuilder v1.2 · pilot · alles lokaal in je browser · offline-geschikt</footer>
+</div>
+
+<div id="overlayBg" class="overlayBg hidden"></div>
+
+<aside id="libraryPanel" class="panel hidden">
+  <div class="panelHead"><span class="t">Library</span><button class="closeX" data-close="libraryPanel">×</button></div>
+  <div id="libraryBody"></div>
+</aside>
+
+<aside id="terugPanel" class="panel hidden">
+  <div class="panelHead"><span class="t">Terug op koers</span><button class="closeX" data-close="terugPanel">×</button></div>
+  <div id="terugBody"></div>
+</aside>
+
+<div id="settingsModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Instellingen</span><button class="closeX" data-close="settingsModal">×</button></div>
+  <div id="settingsBody"></div>
+</div>
+
+<div id="ankerModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Anker — hoe voelt dit?</span><button class="closeX" data-close="ankerModal">×</button></div>
+  <div id="ankerBody"></div>
+</div>
+
+<div id="lockModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Vergrendelinstellingen</span><button class="closeX" data-close="lockModal">×</button></div>
+  <div id="lockBody"></div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<input type="file" id="importFile" accept="application/json" class="hidden">
+
+<script>
+/* =====================================================================
+   CONFIGURATIE — content & instellingen
+   ===================================================================== */
+const CONFIG = {
+  // Zelfde storage key als v1.1 met opzet: als je deze map ooit op
+  // dezelfde plek/origin opent als v1.1, blijft je data behouden.
+  // Werk je online via een nieuwe GitHub Pages/Netlify-locatie, gebruik
+  // dan éénmalig Exporteren in v1.1 -> Importeren hier in v1.2.
+  storageKey: 'cr4_daybuilder_v11',
+
+  palette: {
+    slate:'#7c8798', dustyblue:'#6f8fae', sage:'#7f9b7a', moss:'#8a9a6b',
+    terracotta:'#b97f68', mustard:'#c2a35a', lavender:'#9b8db0',
+    clay:'#b08a73', rose:'#b98a93', sand:'#bfae8e'
+  },
+
+  defaultTags: {
+    cr1:{code:'CR.1', name:'Het Echte Zelf', color:'slate'},
+    cr2:{code:'CR.2', name:'Life Decisions', color:'dustyblue'},
+    cr3:{code:'CR.3', name:'Reality Check', color:'moss'},
+    cr4:{code:'CR.4', name:'Daily Ops', color:'sage'},
+    cr7:{code:'CR.7', name:'Vitality', color:'terracotta'},
+    cr9:{code:'CR.9', name:'Sober Platform', color:'mustard'},
+    cr11:{code:'CR.11', name:'Huishouden', color:'clay'},
+    cr12:{code:'CR.12', name:'TimeTable', color:'lavender'},
+    werk:{code:'WERK', name:'Werk', color:'rose'},
+    prive:{code:'PRIVÉ', name:'Privé', color:'sand'}
+  },
+
+  durationSteps: [5,10,15,20,30,45,60,90,120,150,180,240,300,360,420,480],
+
+  // CR.1 Essentials — ALLEEN deze voeden de Punten-tab.
+  essentials: [
+    '7–9 uur slaap','Buiten bij opstaan','Buiten voor slapen','Bewegen',
+    'Gezonde voeding','Mediteren','Slaaphygiëne','Supplementen','Wandelen','Water'
+  ],
+
+  feelBetter: [
+    'Mediteren','Lezen','Zwemmen','Muziek','Wandelen buiten','Douchen',
+    'Bellen met iemand vertrouwd','Journaling / schrijven'
+  ],
+
+  energyBronnen: {
+    'Fysiek actief': [
+      {naam:'Krachttraining', score:9}, {naam:'Hardlopen', score:8},
+      {naam:'Boksen', score:9}, {naam:'Stretch / mobiliteit', score:6},
+      {naam:'Dansen / bewegen op muziek', score:8}
+    ],
+    'Mentaal & focus': [
+      {naam:'Mediteren', score:6}, {naam:'Schrijven / journaling', score:6},
+      {naam:'Muziek', score:7}, {naam:'Sociaal contact (live)', score:7},
+      {naam:'Visualisatie / doelen', score:7}, {naam:'Affirmaties', score:6}
+    ],
+    'Fysiologisch': [
+      {naam:'Cafeïne (koffie)', score:8}, {naam:'Koude douche', score:8},
+      {naam:'Zonlicht / frisse lucht', score:7}, {naam:'IJsblokje / koud water gezicht', score:7}
+    ]
+  },
+
+  deescalatie: {
+    stappen: [
+      'Rustige plek opzoeken','Ruimte verbeteren (frisse lucht, licht, drinken klaar)',
+      'Prikkels verminderen (telefoon stil)','Emotie lokaliseren',
+      'Begrijpen: gevoel is echt, conclusie nu niet betrouwbaar',
+      'Kiezen: loslaten, uitstellen of makkelijkste veilige optie'
+    ],
+    ikZinnen: [
+      'Ik begrijp dat ik nu getriggerd ben. Ik hoef nu niet te reageren.',
+      'Ik begrijp dat mijn hoofd nu bewijs zoekt, maar ik kies voor rust.',
+      'Ik stel beslissingen uit tot ik weer helder ben.'
+    ],
+    uitstel: ['Ik reageer hier later op. Nu lukt het even niet goed.', 'Ik kom hier morgen op terug.']
+  },
+
+  situaties: ['Gewone dag','Drukke dag','Zakenreis','Vakantie','Ziek / herstellen','Sociale dag'],
+
+  // Vier stemmingen — elk met een klein kleuraccent (gedempte tint).
+  moods: [
+    {id:'laag_onprettig', label:'Moe & zwaar', color:'#6f8fae'},
+    {id:'laag_prettig', label:'Rustig & prettig', color:'#6fa89c'},
+    {id:'hoog_onprettig', label:'Gejaagd & onrustig', color:'#b6615a'},
+    {id:'hoog_prettig', label:'Energiek & fijn', color:'#c9a24b'}
+  ],
+
+  // Klein, rustig setje iconen om bij aanmaken te kiezen (optioneel).
+  icons: ['📌','⏰','💧','🍎','🧘','🏃','💼','📖','🧹','☎️','🎵','🚿','🛌','🌿','✅','🧺','🎯','☕','📞','🛁'],
+  defaultIcon: { vast:'📌', flex:'✅', werkblok:'💼', joy:'🎵', health:'🏃' },
+
+  // Standaard tijden voor nieuwe items (alle hoofdtypen krijgen nu een tijd).
+  defaultTimes: { vast:'09:00', flex:'12:00', werkblok:'10:00', joy:'', health:'' },
+
+  // Hoeveel minuten na de geplande tijd van een verplicht item de status op
+  // rood springt (status volgt je eigen schema, geen vaste klokuren).
+  overdueThresholdMinutes: 45,
+
+  // Na hoeveel dagen zonder export de zachte back-up-herinnering verschijnt.
+  backupReminderAfterDays: 3,
+
+  windDownOptions: [30,60,90],
+
+  starterLibrary: [
+    {id:'lib1', type:'health', title:'Wandelen', why:'Hoofd leegmaken, lichaam reguleren', tag:'cr7', duration:20, icon:'🏃', category:'Lichaam'},
+    {id:'lib2', type:'joy', title:'Muziek luisteren', why:'Mood boost, klein moment voor mezelf', tag:'prive', duration:15, icon:'🎵', category:'Plezier'},
+    {id:'lib3', type:'werkblok', title:'Focusblok werk', why:'Concrete voortgang op één taak', tag:'werk', duration:90, icon:'💼', category:'Werk'},
+    {id:'lib4', type:'flex', title:'CR.1 lezen', why:'Richting en identiteit ophalen', tag:'cr1', duration:10, icon:'📖', category:'Richting'},
+    {id:'lib5', type:'health', title:'Krachttraining', why:'Energie en lichamelijke regulatie', tag:'cr7', duration:45, icon:'🏃', category:'Lichaam'},
+    {id:'lib6', type:'joy', title:'Bellen met iemand', why:'Verbinding, niet isoleren', tag:'prive', duration:15, icon:'📞', category:'Plezier'},
+    {id:'lib7', type:'flex', title:'Keuken opruimen', why:'Morgen schoner beginnen', tag:'cr11', duration:10, icon:'🧹', category:'Huishouden'},
+    {id:'lib8', type:'health', title:'Koude douche', why:'Snelle energie-boost', tag:'cr7', duration:5, icon:'🚿', category:'Lichaam'},
+    {id:'lib9', type:'health', title:'Slaap', why:'Herstel en ritme', tag:'cr7', duration:480, icon:'🛌', category:'Lichaam',
+      isSleep:true, time:'23:00', windDown:60, essentialLink: 0}
+  ]
+};
+
+/* =====================================================================
+   LOGICA
+   ===================================================================== */
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+function uid(p){ return (p||'id')+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pad(n){ return n<10?'0'+n:''+n; }
+function toISO(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fromISO(iso){ const p=iso.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function addDays(iso,n){ const d=fromISO(iso); d.setDate(d.getDate()+n); return toISO(d); }
+function todayISO(){ return toISO(new Date()); }
+function daysBetween(isoA, isoB){ return Math.round((fromISO(isoA)-fromISO(isoB))/86400000); }
+const WEEKDAYS = ['zo','ma','di','wo','do','vr','za'];
+const WEEKDAYS_MON0 = ['ma','di','wo','do','vr','za','zo']; // index 0 = maandag, voor herhaling
+const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function fmtDateShort(iso){ const d=fromISO(iso); return WEEKDAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS_SHORT[d.getMonth()]; }
+function fmtDuration(min){
+  if(min==null) return '';
+  if(min<60) return min+' min';
+  const h=Math.floor(min/60), m=min%60;
+  return h+'u'+(m?' '+m:'');
+}
+function nowMinutes(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function timeToMinutes(t){ if(!t) return null; const p=t.split(':').map(Number); return p[0]*60+p[1]; }
+function mondayIndex(jsDay){ return jsDay===0?6:jsDay-1; } // JS: zo=0..za=6 -> ma=0..zo=6
+
+/* ---------- state ---------- */
+let STATE = null;
+
+function defaultState(){
+  return {
+    settings: { countdownEnabled:true, tagDisplayMode:'dot', pointsEnabled:true },
+    tags: JSON.parse(JSON.stringify(CONFIG.defaultTags)),
+    library: JSON.parse(JSON.stringify(CONFIG.starterLibrary)),
+    recurringTemplates: [],
+    essentialsChecked: {},
+    moods: {},
+    days: {},
+    lastBackup: null,
+    backupReminderDismissedOn: null
+  };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if(!raw){ STATE = defaultState(); return; }
+    const parsed = JSON.parse(raw);
+    STATE = Object.assign(defaultState(), parsed);
+    STATE.settings = Object.assign(defaultState().settings, parsed.settings||{});
+  }catch(e){ STATE = defaultState(); }
+}
+function saveState(){ localStorage.setItem(CONFIG.storageKey, JSON.stringify(STATE)); }
+
+function emptyDay(dateISO){
+  return {
+    date: dateISO,
+    framing: { intentie:'', maxDoel:'', minDoel:'', situatie:CONFIG.situaties[0] },
+    items: [],
+    closing: { minDoelMet:false, oneLiner:'', dayRating:0, closed:false }
+  };
+}
+
+/* Bouwt een dag-object (carry-over + herhalend) ZONDER het op te slaan —
+   gebruikt om te laten zien wat een dag zou bevatten als je hem bekijkt,
+   zonder dat alleen bekijken al een echte dag aanmaakt. */
+function buildDayObject(dateISO){
+  const day = emptyDay(dateISO);
+  const weekdayIdx = mondayIndex(fromISO(dateISO).getDay());
+
+  for(let back=1; back<=7; back++){
+    const prevISO = addDays(dateISO, -back);
+    const prev = STATE.days[prevISO];
+    if(prev){
+      prev.items.filter(it=>it.type==='flex' && !it.done && !it.recurringTemplateId).forEach(it=>{
+        const clone = Object.assign({}, it, { id: uid('item'), carriedOver:true, order: day.items.length });
+        delete clone._expanded; delete clone._motifEditing;
+        day.items.push(clone);
+      });
+      break;
+    }
+  }
+
+  STATE.recurringTemplates.forEach(t=>{
+    const days = t.repeatDays || [];
+    if(days.length && !days.includes(weekdayIdx)) return;
+    day.items.push(Object.assign({}, t.data, {
+      id: uid('item'), done:false, carriedOver:false, order: day.items.length,
+      recurringTemplateId:t.templateId, recurring:true
+    }));
+  });
+
+  return day;
+}
+/* Alleen-lezen weergave van een dag — maakt NIETS aan in STATE.days.
+   Gebruik dit in alle render-functies (bekijken mag nooit persisten). */
+function peekDay(dateISO){
+  return STATE.days[dateISO] || buildDayObject(dateISO);
+}
+/* Dag die écht iets met zich laat doen (item toevoegen/afvinken, framing
+   invullen, ...). Wordt pas nu, op het moment van een echte actie,
+   aangemaakt en opgeslagen — niet door alleen te bekijken/bladeren. */
+function getDay(dateISO){
+  if(STATE.days[dateISO]) return STATE.days[dateISO];
+  const day = buildDayObject(dateISO);
+  STATE.days[dateISO] = day;
+  saveState();
+  return day;
+}
+
+let currentDate = todayISO();
+let currentView = 'live';
+
+/* ---------- tag / kleur helpers ---------- */
+function tagInfo(tagId){ return STATE.tags[tagId] || {code:'?', name:'Onbekend', color:'slate'}; }
+function colorHex(name){ return CONFIG.palette[name] || '#8b8f97'; }
+function tagOptionsHTML(selectedId){
+  return Object.keys(STATE.tags).map(id=>{
+    const t = STATE.tags[id];
+    return `<option value="${id}" ${id===selectedId?'selected':''}>${esc(t.code)} · ${esc(t.name)}</option>`;
+  }).join('');
+}
+function tagChipLabel(tagId){
+  const t = tagInfo(tagId);
+  const mode = STATE.settings.tagDisplayMode;
+  if(mode==='label') return esc(t.code);
+  if(mode==='custom') return esc(t.name);
+  return '';
+}
+
+/* ---------- item helpers ---------- */
+const TYPE_LABEL = { vast:'Vast moment', flex:'Flexibel punt', werkblok:'Werkblok', joy:'Act of joy', health:'Act of health' };
+const TYPE_DEFAULT_TAG = { vast:'cr4', flex:'cr4', werkblok:'werk', joy:'prive', health:'cr7' };
+
+function newItem(type){
+  return {
+    id: uid('item'), type: type,
+    title:'', why:'', tag: TYPE_DEFAULT_TAG[type] || 'cr4',
+    icon: CONFIG.defaultIcon[type] || '📌',
+    time: CONFIG.defaultTimes[type] ?? '',
+    location:'', message:'',
+    duration: type==='werkblok' ? 60 : (type==='vast' ? null : 20),
+    recurring:false, locked:false,
+    lockSettings:{ repeatDays:[], repeatTime:'', duration:null },
+    note:'', subtasks:[], linkModule:'',
+    required: type==='vast' || type==='werkblok',
+    done:false, carriedOver:false,
+    resultPlanned:'', resultActual:'',
+    essentialLink:null,
+    isSleep:false, windDown:60,
+    order:0
+  };
+}
+/* Items met een tijd sorteren zichzelf automatisch chronologisch; items
+   zonder tijd (alleen nog mogelijk bij Act of joy/health) komen achteraan,
+   op volgorde van hun handmatige ▲▼-positie. */
+function sortKey(it){
+  if(it.time){ return timeToMinutes(it.time) + (it.order||0)/1e6; }
+  return 1e7 + (it.order||0);
+}
+function orderedItems(day){ return day.items.slice().sort((a,b)=>sortKey(a)-sortKey(b)); }
+function durationIndex(min){
+  let idx = CONFIG.durationSteps.indexOf(min);
+  if(idx<0){ idx=0; let best=Infinity; CONFIG.durationSteps.forEach((v,i)=>{ const d=Math.abs(v-(min||0)); if(d<best){best=d; idx=i;} }); }
+  return idx;
+}
+
+/* Houdt een gekoppelde herhaal-template in sync met het item. */
+function syncTemplate(it){
+  if(!it.recurring || !it.recurringTemplateId) return;
+  const t = STATE.recurringTemplates.find(x=>x.templateId===it.recurringTemplateId);
+  if(!t) return;
+  t.data = Object.assign({}, t.data, {
+    type:it.type, title:it.title, why:it.why, tag:it.tag, icon:it.icon,
+    time:it.time, location:it.location, message:it.message, duration:it.duration,
+    required:it.required, isSleep:it.isSleep, windDown:it.windDown, essentialLink:it.essentialLink
+  });
+}
+
+/* ---------- status ---------- */
+/* Status volgt uitsluitend je EIGEN geplande tijden, geen vaste klokuren.
+   neutral = nog niets aan de hand (startstatus); orange = iets met een
+   geplande tijd loopt net achter; red = ruim voorbij de drempel. */
+function computeStatus(day, dateISO){
+  if(day.items.length===0) return 'neutral';
+  const required = day.items.filter(it=>it.required);
+  const requiredDone = required.length===0 || required.every(it=>it.done);
+  const minDoelMet = day.closing.minDoelMet || !day.framing.minDoel;
+  if(requiredDone && minDoelMet) return 'green';
+
+  if(dateISO===todayISO()){
+    const now = nowMinutes();
+    const red = required.some(it=>!it.done && it.time && (now - timeToMinutes(it.time)) >= CONFIG.overdueThresholdMinutes);
+    if(red) return 'red';
+    const orange = required.some(it=>!it.done && it.time && now > timeToMinutes(it.time));
+    if(orange) return 'orange';
+  }
+  return 'neutral';
+}
+const STATUS_LABEL = { neutral:'Onderweg', green:'Goed genoeg — de dag staat', orange:'Iets loopt achter', red:'Loopt achter op eigen schema' };
+const STATUS_COLOR = { neutral:'var(--neutral)', green:'var(--good)', orange:'var(--warn)', red:'var(--bad)' };
+
+/* =====================================================================
+   RENDER — LIVE
+   ===================================================================== */
+function renderLive(){
+  const day = peekDay(currentDate);
+  const status = computeStatus(day, currentDate);
+  $('#liveStatusDot').style.background = STATUS_COLOR[status];
+  $('#liveStatusText').textContent = STATUS_LABEL[status];
+
+  renderBackupReminder();
+  renderSleepBanner(day);
+
+  const items = orderedItems(day);
+  const notDone = items.filter(it=>!it.done);
+
+  if(items.length===0){
+    $('#nowPrev').innerHTML=''; $('#nowNext').innerHTML='';
+    $('#nowCurrentBox').innerHTML = `<div class="cur-eyebrow">Nog niets gebouwd</div><div class="cur-title">Ga naar Bouwen</div><div class="cur-why">Voeg een paar onderdelen toe voor vandaag — zo klein als je wilt.</div>`;
+    renderReflect(); return;
+  }
+  if(notDone.length===0){
+    $('#nowPrev').innerHTML = items[items.length-2] ? sideLineHTML(items[items.length-2]) : '';
+    $('#nowNext').innerHTML = '';
+    $('#nowCurrentBox').innerHTML = `<div class="allDoneMsg">Alles afgevinkt voor vandaag.<br>Kijk eventueel nog naar <b>Kalender</b> om af te sluiten.</div>`;
+    renderReflect(); return;
+  }
+
+  // klok-gestuurd: een getimed item dat nu "loopt" heeft voorrang, anders
+  // gewoon het eerstvolgende open item in de eigen (chronologische) volgorde.
+  const now = nowMinutes();
+  let current = notDone.find(it=>it.time && timeToMinutes(it.time)<=now && (!it.duration || now < timeToMinutes(it.time)+it.duration) && currentDate===todayISO());
+  if(!current) current = notDone[0];
+
+  const idx = items.indexOf(current);
+  const prev = idx>0 ? items[idx-1] : null;
+  const nextIdx = notDone.indexOf(current);
+  const next = notDone[nextIdx+1] || null;
+
+  $('#nowPrev').innerHTML = prev ? sideLineHTML(prev) : '<span style="opacity:.4">— start van de dag —</span>';
+  $('#nowNext').innerHTML = next ? sideLineHTML(next) : '<span style="opacity:.4">— laatste voor nu —</span>';
+
+  let countdownHTML = '';
+  if(STATE.settings.countdownEnabled && currentDate===todayISO()){
+    const upcoming = items.filter(it=>it.time && !it.done && timeToMinutes(it.time)>=now);
+    if(upcoming.length){
+      upcoming.sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time));
+      const mins = timeToMinutes(upcoming[0].time) - now;
+      countdownHTML = `<div class="countdown">⏱ nog ${mins} min tot "${esc(upcoming[0].title||'vast moment')}" (${upcoming[0].time})</div>`;
+    }
+  }
+  const overdue = current.time && currentDate===todayISO() && timeToMinutes(current.time) < now;
+
+  $('#nowCurrentBox').innerHTML = `
+    <div class="cur-eyebrow">${esc(TYPE_LABEL[current.type])}${overdue?' · loopt uit':''}</div>
+    <div class="cur-title">${current.icon?esc(current.icon)+' ':''}${esc(current.title || '(naamloos)')}</div>
+    ${current.why?`<div class="cur-why">${esc(current.why)}</div>`:''}
+    ${current.message?`<div class="cur-msg">${esc(current.message)}</div>`:''}
+    <div class="cur-meta">
+      ${current.time?`<span class="timeBadge">${esc(current.time)}${current.location?' · '+esc(current.location):''}</span>`:''}
+      ${current.duration?`<span class="durBadge">${fmtDuration(current.duration)}</span>`:''}
+      ${tagBadgeHTML(current.tag)}
+    </div>
+    <button class="cur-done" data-donenow="${current.id}">Klaar — volgende</button>
+    ${countdownHTML}
+  `;
+  renderReflect();
+}
+function sideLineHTML(it){ return `<b>${it.icon?esc(it.icon)+' ':''}${esc(it.title || '(naamloos)')}</b>${it.time?' · '+esc(it.time):''}`; }
+function tagBadgeHTML(tagId){
+  const t = tagInfo(tagId); const label = tagChipLabel(tagId);
+  return `<span class="durBadge"><span class="tagDot" style="background:${colorHex(t.color)}"></span>${label}</span>`;
+}
+function renderSleepBanner(day){
+  if(currentDate!==todayISO()){ $('#sleepBannerBox').innerHTML=''; return; }
+  const now = nowMinutes();
+  const sleepItem = day.items.find(it=>it.isSleep && it.time && !it.done);
+  if(!sleepItem){ $('#sleepBannerBox').innerHTML=''; return; }
+  const sleepMin = timeToMinutes(sleepItem.time);
+  const windDown = sleepItem.windDown || 60;
+  const diff = sleepMin - now;
+  if(diff>0 && diff<=windDown){
+    const hrs = Math.round(diff/60*10)/10;
+    const label = diff>=60 ? `Over ${hrs} uur` : `Over ${diff} min`;
+    $('#sleepBannerBox').innerHTML = `<div class="sleepBanner">🛌 ${label} slapen — tijd om af te bouwen</div>`;
+  } else {
+    $('#sleepBannerBox').innerHTML = '';
+  }
+}
+function renderReflect(){
+  const current = STATE.moods[currentDate];
+  $('#reflectRow').innerHTML = CONFIG.moods.map(m=>
+    `<button class="reflectBtn ${current===m.id?'active':''}" data-mood="${m.id}" style="--mc:${m.color}"><span style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 14px 14px 0;border-color:transparent ${m.color} transparent transparent"></span>${esc(m.label)}</button>`
+  ).join('');
+}
+
+/* ---------- back-up herinnering (zacht, wegklikbaar) ---------- */
+function shouldShowBackupReminder(){
+  if(STATE.backupReminderDismissedOn===todayISO()) return false;
+  if(!STATE.lastBackup) return true;
+  return daysBetween(todayISO(), STATE.lastBackup) > CONFIG.backupReminderAfterDays;
+}
+function renderBackupReminder(){
+  const box = $('#backupReminderBox');
+  if(!box) return;
+  if(shouldShowBackupReminder()){
+    box.innerHTML = `<div class="backupReminder"><span>Al even geen back-up gemaakt — <a data-opensettings>exporteer in instellingen</a></span><button data-dismissbackup title="Niet nu">×</button></div>`;
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+/* =====================================================================
+   RENDER — BOUWEN
+   ===================================================================== */
+function renderFraming(){
+  const day = peekDay(currentDate);
+  const f = day.framing;
+  $('#framingBox').innerHTML = `
+    <div class="full"><label>Intentie voor vandaag</label><input type="text" data-framing="intentie" value="${esc(f.intentie)}" placeholder="Waar wil ik dat deze dag om draait?"></div>
+    <div><label>Maximum-doel (plafond)</label><input type="text" data-framing="maxDoel" value="${esc(f.maxDoel)}" placeholder="Meer dan dit = overdrive"></div>
+    <div><label>Minimum-doel (vloer)</label><input type="text" data-framing="minDoel" value="${esc(f.minDoel)}" placeholder="Dit moet minstens lukken"></div>
+    <div class="full"><label>Capture the moment — wat voor dag is dit?</label>
+      <select data-framing="situatie">${CONFIG.situaties.map(s=>`<option ${s===f.situatie?'selected':''}>${esc(s)}</option>`).join('')}</select>
+    </div>
+  `;
+}
+function renderAddMenu(){
+  $('#addMenuPopup').innerHTML = `
+    <button data-add="flex">Flexibel punt</button>
+    <button data-add="vast">Vast moment</button>
+    <button data-add="werkblok">Werkblok</button>
+    <div class="soft">
+      <button data-add="joy">Act of joy</button>
+      <button data-add="health">Act of health</button>
+    </div>
+  `;
+}
+function renderBuilderList(){
+  const day = peekDay(currentDate);
+  const items = orderedItems(day);
+  if(items.length===0){
+    $('#builderList').innerHTML = `<div style="font-size:11px;color:var(--muted);padding:6px 2px">Nog leeg. Tik op + hierboven, of open de Library (📖).</div>`;
+    return;
+  }
+  const untimed = items.filter(it=>!it.time);
+  $('#builderList').innerHTML = items.map(it=>{
+    const uIdx = untimed.indexOf(it);
+    return itemCardHTML(it, uIdx, untimed.length);
+  }).join('');
+}
+
+function itemCardHTML(it, untimedIdx, untimedTotal){
+  const t = tagInfo(it.tag);
+  const expanded = it._expanded ? 'expanded' : '';
+  const locked = it.locked ? 'locked' : '';
+  const hasTime = !!it.time;
+  const showDuration = it.duration!=null;
+  const showRequired = it.type==='vast' || it.type==='werkblok';
+  const dis = it.locked ? 'disabled' : '';
+  const ro = it.locked ? 'readonly' : '';
+
+  const motifHTML = it._motifEditing
+    ? `<div class="motifRow"><input type="text" class="motifInput" data-field="why" value="${esc(it.why)}" placeholder="Mijn motief…" autofocus></div>`
+    : (it.why
+        ? `<div class="motifRow"><span class="motifLine" data-motifopen>${esc(it.why)}</span></div>`
+        : `<div class="motifRow"><button class="motifArrow" data-motifopen ${dis}>▸</button></div>`);
+
+  return `
+  <div class="item ${it.done?'isdone':''} ${it.carriedOver?'carried':''} ${expanded} ${locked}" data-id="${it.id}" style="border-left:3px solid ${colorHex(t.color)}">
+    <button class="expandBtn" data-toggle="expand">${it._expanded?'minder ▴':'meer ▾'}</button>
+    <div class="row1">
+      <div class="reorder">
+        ${hasTime ? '' : `<button data-move="up" ${untimedIdx===0?'disabled':''}>▲</button><button data-move="down" ${untimedIdx===untimedTotal-1?'disabled':''}>▼</button>`}
+      </div>
+      <input type="checkbox" class="done" data-field="done" ${it.done?'checked':''}>
+      <div class="main">
+        <div class="titleRow">
+          <span class="iconGlyph">${esc(it.icon||'')}</span>
+          <input type="text" class="titleInput" data-field="title" value="${esc(it.title)}" placeholder="${esc(TYPE_LABEL[it.type])}…" ${ro}>
+        </div>
+        ${motifHTML}
+        ${(!it._expanded && it.message)?`<div class="messageLine">💬 ${esc(it.message)}</div>`:''}
+      </div>
+    </div>
+    <div class="meta">
+      <span class="tagChip"><select data-field="tag" ${dis}>${tagOptionsHTML(it.tag)}</select></span>
+      <input type="time" class="timeBadge" data-field="time" value="${it.time||''}" style="border:1px solid var(--line);background:var(--panel)" ${dis}>
+      ${showDuration?`<span class="durBadge">${fmtDuration(it.duration)}</span>`:''}
+      ${showRequired?`<span class="reqChip ${it.required?'on':''}" data-toggle="required">verplicht</span>`:''}
+      <span class="ctrlCluster">
+        <button class="infBtn ${it.recurring?'on':''}" data-toggle="recurring" title="Herhalend" ${dis}>∞</button>
+        <button class="lockBtn ${it.locked?'on':''}" data-openlock title="Vergrendelen"><span class="dot"></span></button>
+        <button class="delBtn" data-delete title="Verwijderen" ${dis}>×</button>
+      </span>
+    </div>
+    <div class="detail">
+      ${showDuration?`<label>Duur</label><div class="rangeRow"><input type="range" min="0" max="${CONFIG.durationSteps.length-1}" value="${durationIndex(it.duration)}" data-field="durationIdx" ${dis}><span class="durBadge">${fmtDuration(it.duration)}</span></div>`:''}
+
+      <label>Icoon</label>
+      <div class="iconPick">${CONFIG.icons.map(ic=>`<button type="button" data-seticon="${ic}" class="${ic===it.icon?'on':''}" ${dis}>${ic}</button>`).join('')}</div>
+
+      <label>Locatie (optioneel)</label>
+      <input type="text" data-field="location" value="${esc(it.location)}" placeholder="bijv. 54-215 of thuis" ${ro}>
+
+      <label>Moment-bericht (optioneel, verschijnt kort zodra dit item "live" wordt)</label>
+      <input type="text" data-field="message" value="${esc(it.message)}" placeholder="bijv. Geniet van het moment!" ${ro}>
+
+      ${it.isSleep?`<label>Afbouwmelding</label>
+        <select data-field="windDown" ${dis}>${CONFIG.windDownOptions.map(m=>`<option value="${m}" ${m===it.windDown?'selected':''}>${m} min vooraf</option>`).join('')}</select>`:''}
+
+      <label>Notitie</label>
+      <textarea data-field="note" placeholder="Eigen notitie…" ${dis}>${esc(it.note)}</textarea>
+
+      <label>Link naar andere CR-module</label>
+      <input type="text" data-field="linkModule" value="${esc(it.linkModule)}" placeholder="bijv. CR.1.5.html" ${ro}>
+      ${it.linkModule?`<div style="margin-top:4px"><a href="${esc(it.linkModule)}" target="_blank" style="font-size:11px;color:var(--accent)">↗ open ${esc(it.linkModule)}</a></div>`:''}
+
+      <label>Koppel aan CR.1 Essential (voedt Punten)</label>
+      <select data-field="essentialLink" ${dis}>
+        <option value="">— geen koppeling —</option>
+        ${CONFIG.essentials.map((e,i)=>`<option value="${i}" ${it.essentialLink===i?'selected':''}>${esc(e)}</option>`).join('')}
+      </select>
+
+      <label>Subtaken</label>
+      <div class="subtaskList">
+        ${(it.subtasks||[]).map((s,si)=>`<div class="subtask">
+            <input type="checkbox" data-sub="${si}" data-subfield="done" ${s.done?'checked':''}>
+            <input type="text" data-sub="${si}" data-subfield="text" value="${esc(s.text)}" placeholder="Subtaak…" ${ro}>
+            <button data-sub="${si}" data-subdel ${dis}>×</button>
+          </div>`).join('')}
+      </div>
+      <div class="detailActions">
+        <button data-addsub ${dis}>+ subtaak</button>
+        <button data-savelib>opslaan in library</button>
+      </div>
+
+      ${it.type==='werkblok'?`
+      <label>Gewenst resultaat (vooraf)</label>
+      <textarea data-field="resultPlanned" placeholder="Wanneer is dit werkblok geslaagd?" ${dis}>${esc(it.resultPlanned)}</textarea>
+      <label>Werkelijk resultaat (achteraf)</label>
+      <textarea data-field="resultActual" placeholder="Wat is er echt uitgekomen?">${esc(it.resultActual)}</textarea>`:''}
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   RENDER — KALENDER
+   ===================================================================== */
+let calendarAnchor = currentDate; // welke week tonen we
+
+function renderWeekStrip(){
+  const anchorDate = fromISO(calendarAnchor);
+  const mondayOffset = -mondayIndex(anchorDate.getDay());
+  const monday = addDays(calendarAnchor, mondayOffset);
+  let html = '';
+  for(let i=0;i<7;i++){
+    const iso = addDays(monday, i);
+    const d = fromISO(iso);
+    const mood = STATE.moods[iso];
+    const moodColor = mood ? (CONFIG.moods.find(m=>m.id===mood)||{}).color : null;
+    html += `<div class="weekDay ${iso===currentDate?'today':''}" data-jump="${iso}">
+      <span class="wd">${WEEKDAYS[d.getDay()]}</span>
+      <span class="wn">${d.getDate()}</span>
+      <span class="wdot" style="background:${moodColor||'var(--line)'}"></span>
+    </div>`;
+  }
+  $('#weekStrip').innerHTML = `<button class="monthLabelBtn" id="calLabelBtn">${MONTHS[fromISO(currentDate).getMonth()]} ${fromISO(currentDate).getFullYear()}</button>` + html;
+}
+function renderCalLegend(){
+  $('#calLegend').innerHTML = CONFIG.moods.map(m=>`<div class="legendRow"><span class="legendDot" style="background:${m.color}"></span>${esc(m.label)}</div>`).join('');
+}
+
+function renderMonthPopup(){
+  const d = fromISO(currentDate);
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const startOffset = mondayIndex(first.getDay());
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += `<div class="monthCell"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const iso = toISO(new Date(d.getFullYear(), d.getMonth(), day));
+    const hasPlan = !!STATE.days[iso];
+    cells += `<div class="monthCell ${iso===todayISO()?'today':''}" data-jump="${iso}">${day}${hasPlan?'<div class="pdot"></div>':''}</div>`;
+  }
+  $('#monthPopup').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800">
+      <span>${MONTHS[d.getMonth()]} ${d.getFullYear()}</span>
+      <button class="navBtn" id="btnJumpToday" style="width:auto;padding:3px 8px;border-radius:8px">vandaag</button>
+    </div>
+    <div class="monthGrid">${WEEKDAYS_MON0.map(w=>`<div class="monthCell" style="color:var(--faint);font-weight:800">${w}</div>`).join('')}${cells}</div>
+  `;
+}
+
+function renderCalendar(){
+  calendarAnchor = currentDate;
+  renderWeekStrip();
+  renderCalLegend();
+
+  const day = peekDay(currentDate);
+  const status = computeStatus(day, currentDate);
+  $('#statusDot').style.background = STATUS_COLOR[status];
+  $('#statusText').textContent = STATUS_LABEL[status];
+
+  const items = orderedItems(day);
+  if(items.length===0){
+    $('#dayTimeline').innerHTML = `<div style="font-size:11px;color:var(--muted)">Nog niets gebouwd voor deze dag. Ga naar Bouwen.</div>`;
+  } else {
+    $('#dayTimeline').innerHTML = items.map((it,i)=>{
+      const movable = it.type==='flex' && !it.locked;
+      return `
+      <div class="tlRow" ${it.time?`data-time="${it.time}"`:''} data-id="${it.id}">
+        ${movable?'<span class="tlHandle" title="Slepen om tijd te wijzigen">⋮⋮</span>':'<span style="width:11px"></span>'}
+        <span class="tlNum">${i+1}</span>
+        <input type="checkbox" class="tlCheck" data-field="done" data-tlid="${it.id}" ${it.done?'checked':''}>
+        <div class="tlBody">
+          <div class="tlTitle ${it.done?'isdone':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</div>
+          <div class="tlMeta">
+            ${movable
+              ? `<input type="time" class="tlTimeInput" data-tltime="${it.id}" value="${it.time||''}">`
+              : (it.time?esc(it.time):'')}
+            ${it.duration?' · '+fmtDuration(it.duration):''}${it.location?' · '+esc(it.location):''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    positionNowLine(items);
+  }
+  renderClosing();
+}
+
+function positionNowLine(items){
+  const wrap = $('#dayTimeline');
+  const old = $('#nowLineEl'); if(old) old.remove();
+  if(currentDate!==todayISO()) return;
+  const timed = items.filter(it=>it.time);
+  if(timed.length===0) return;
+  const now = nowMinutes();
+  const rows = $all('.tlRow[data-time]', wrap);
+  if(rows.length===0) return;
+  let before=null, after=null;
+  rows.forEach(r=>{
+    const m = timeToMinutes(r.dataset.time);
+    if(m<=now) before=r; if(m>=now && !after) after=r;
+  });
+  let y;
+  const wrapTop = wrap.getBoundingClientRect().top;
+  if(before && after && before!==after){
+    const t1 = before.getBoundingClientRect(), t2 = after.getBoundingClientRect();
+    const m1 = timeToMinutes(before.dataset.time), m2 = timeToMinutes(after.dataset.time);
+    const frac = m2>m1 ? (now-m1)/(m2-m1) : 0;
+    y = (t1.bottom-wrapTop) + frac*((t2.top-wrapTop)-(t1.bottom-wrapTop));
+  } else if(before){
+    y = before.getBoundingClientRect().bottom - wrapTop;
+  } else if(after){
+    y = after.getBoundingClientRect().top - wrapTop;
+  } else return;
+  const line = document.createElement('div');
+  line.id='nowLineEl'; line.className='nowLine'; line.style.top = Math.max(0,y)+'px';
+  wrap.style.position='relative';
+  wrap.appendChild(line);
+}
+
+function renderClosing(){
+  const day = peekDay(currentDate);
+  const werkblokken = day.items.filter(it=>it.type==='werkblok');
+  $('#closingBox').innerHTML = `
+    ${werkblokken.length ? werkblokken.map(w=>`
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700">${esc(w.title||'Werkblok')}</div>
+        <textarea data-closeresult="${w.id}" placeholder="Werkelijk resultaat…" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;min-height:40px">${esc(w.resultActual)}</textarea>
+      </div>`).join('') : '<div style="font-size:11px;color:var(--muted)">Geen werkblokken vandaag.</div>'}
+
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px">
+      <input type="checkbox" id="minDoelChk" ${day.closing.minDoelMet?'checked':''}> Minimum-doel gehaald
+    </label>
+
+    <label style="display:block;font-size:10px;color:var(--muted);margin-top:8px">Hoe was de dag? (1–5)</label>
+    <div class="ratingRow" id="ratingRow">${[1,2,3,4,5].map(n=>`<button data-rating="${n}" class="${day.closing.dayRating===n?'on':''}">${n}</button>`).join('')}</div>
+
+    <label style="display:block;font-size:10px;color:var(--muted);margin-top:8px">Kreeg ik de dag die ik wilde? (1 regel)</label>
+    <input type="text" id="oneLinerInput" value="${esc(day.closing.oneLiner)}" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px">
+
+    <div class="closingRow">
+      <button id="btnCloseDay" style="border:1px solid var(--good);color:var(--good);background:transparent;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer">
+        ${day.closing.closed?'Dag afgesloten ✓':'Dag afsluiten'}
+      </button>
+    </div>
+  `;
+}
+
+/* =====================================================================
+   RENDER — PUNTEN
+   ===================================================================== */
+function renderPoints(){
+  if(!STATE.settings.pointsEnabled){
+    $('#pointsCard').innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:30px 10px">Punten-tab staat uit. Zet hem aan via instellingen (⚙).</div>`;
+    return;
+  }
+  const checked = STATE.essentialsChecked[currentDate] || {};
+  const total = CONFIG.essentials.length;
+  const done = CONFIG.essentials.filter((_,i)=>checked[i]).length;
+
+  let weekHTML = '';
+  for(let i=6;i>=0;i--){
+    const iso = addDays(todayISO(), -i);
+    const c = STATE.essentialsChecked[iso] || {};
+    const n = CONFIG.essentials.filter((_,idx)=>c[idx]).length;
+    const pct = Math.round(n/total*100);
+    weekHTML += `<div class="pointsWeekCol"><div class="pointsWeekBar"><i style="height:${pct}%"></i></div><div class="pointsWeekLbl">${fromISO(iso).getDate()}</div></div>`;
+  }
+
+  $('#pointsCard').innerHTML = `
+    <div class="sectionLabel">Punten — alleen CR.1 Essentials, geen strafpunten</div>
+    <div style="font-size:11px;color:var(--muted)">${done} / ${total} vandaag</div>
+    <div class="meter">${CONFIG.essentials.map((_,i)=>`<div class="meterBox ${checked[i]?'on':''}"></div>`).join('')}</div>
+    ${CONFIG.essentials.map((e,i)=>`<label class="essItem"><input type="checkbox" data-ess="${i}" ${checked[i]?'checked':''}> ${esc(e)}</label>`).join('')}
+    <div class="sectionLabel" style="margin-top:12px">Laatste 7 dagen</div>
+    <div class="pointsWeek">${weekHTML}</div>
+  `;
+}
+
+/* =====================================================================
+   RENDER — LIBRARY (categorieën in-/uitklapbaar) — alleen vanuit Bouwen
+   ===================================================================== */
+let libraryOpenCats = {};
+function renderLibrary(){
+  const byCat = {};
+  STATE.library.forEach(b=>{ const cat=b.category||'Overig'; (byCat[cat]=byCat[cat]||[]).push(b); });
+  let html='';
+  Object.keys(byCat).forEach(cat=>{
+    const open = libraryOpenCats[cat] !== false;
+    html += `<div class="libCatHead" data-libcat="${esc(cat)}"><span class="libCatTitle">${esc(cat)}</span><span class="libCatArrow">${open?'▾':'▸'}</span></div>`;
+    if(open){
+      byCat[cat].forEach(b=>{
+        const t = tagInfo(b.tag);
+        html += `<div class="libItem" style="border-left:3px solid ${colorHex(t.color)}">
+          <span class="libIcon">${esc(b.icon||'•')}</span>
+          <div><div class="t">${esc(b.title)}</div><div class="w">${esc(b.why||'')} · ${fmtDuration(b.duration)}</div></div>
+          <div class="actions"><button data-liblib-add="${b.id}">+ vandaag</button><button data-liblib-del="${b.id}">×</button></div>
+        </div>`;
+      });
+    }
+  });
+  $('#libraryBody').innerHTML = html + `<div style="font-size:10px;color:var(--faint);margin-top:8px;border-top:1px dashed var(--line);padding-top:8px">Tip: open een item en klik "opslaan in library" om eigen blokken te verzamelen.</div>`;
+}
+
+/* =====================================================================
+   RENDER — TERUG OP KOERS
+   ===================================================================== */
+function renderTerug(focus){
+  let html='';
+  if(focus) html += `<div class="quote">Focus: ${esc(focus)}</div>`;
+
+  html += `<details open><summary class="sectionLabel" style="cursor:pointer">Energiebronnen</summary>`;
+  Object.keys(CONFIG.energyBronnen).forEach(cat=>{
+    html += `<div class="energyCat"><div class="catTitle">${esc(cat)}</div>`;
+    CONFIG.energyBronnen[cat].forEach(e=>{ html += `<div class="energyRow"><span>${esc(e.naam)}</span><span class="scorePip">${e.score}/10</span></div>`; });
+    html += `</div>`;
+  });
+  html += `</details>`;
+
+  html += `<details ${focus==='De-escalatie'?'open':''}><summary class="sectionLabel" style="cursor:pointer;margin-top:10px">De-escalatie</summary>`;
+  CONFIG.deescalatie.stappen.forEach((s,i)=>{ html += `<div class="deescStep"><b>${i+1}</b>${esc(s)}</div>`; });
+  CONFIG.deescalatie.ikZinnen.forEach(q=>{ html += `<div class="quote">${esc(q)}</div>`; });
+  CONFIG.deescalatie.uitstel.forEach(q=>{ html += `<div class="quote">${esc(q)}</div>`; });
+  html += `</details>`;
+
+  html += `<details ${focus==='Feel-better toolkit'?'open':''}><summary class="sectionLabel" style="cursor:pointer;margin-top:10px">Feel-better toolkit</summary>
+    <div class="chklist">${CONFIG.feelBetter.map(f=>`<div class="chkrow">· ${esc(f)}</div>`).join('')}</div></details>`;
+
+  html += `<details style="margin-top:10px"><summary class="sectionLabel" style="cursor:pointer">Tag-legenda</summary>
+    <div style="margin:6px 0"><label style="font-size:10px;color:var(--muted)">Weergave</label>
+      <select id="tagDisplaySelect" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">
+        <option value="dot" ${STATE.settings.tagDisplayMode==='dot'?'selected':''}>Alleen kleurstip</option>
+        <option value="label" ${STATE.settings.tagDisplayMode==='label'?'selected':''}>Kleurstip + code</option>
+        <option value="custom" ${STATE.settings.tagDisplayMode==='custom'?'selected':''}>Kleurstip + eigen naam</option>
+      </select></div>
+    ${Object.keys(STATE.tags).map(id=>{ const t=STATE.tags[id]; return `<div class="chkrow">
+        <span class="tagDot" style="background:${colorHex(t.color)}"></span>
+        <input type="text" data-tagcode="${id}" value="${esc(t.code)}" style="width:56px;border:1px solid var(--line);border-radius:6px;padding:2px 4px;font-size:10px">
+        <input type="text" data-tagname="${id}" value="${esc(t.name)}" style="flex:1;border:1px solid var(--line);border-radius:6px;padding:2px 4px;font-size:10px">
+        <select data-tagcolor="${id}" style="border:1px solid var(--line);border-radius:6px;font-size:10px">${Object.keys(CONFIG.palette).map(c=>`<option value="${c}" ${c===t.color?'selected':''}>${c}</option>`).join('')}</select>
+      </div>`; }).join('')}
+  </details>`;
+
+  html += `<div style="margin-top:10px"><div class="moodTrailRow"><span class="sectionLabel" style="margin:0">Laatste 7 dagen</span><button class="legendArrow" data-legend="terugLegend">legenda ▾</button></div>
+    <div class="moodTrail">${last7MoodDots()}</div>
+    <div class="legendBox" id="terugLegend">${CONFIG.moods.map(m=>`<div class="legendRow"><span class="legendDot" style="background:${m.color}"></span>${esc(m.label)}</div>`).join('')}</div>
+  </div>`;
+
+  $('#terugBody').innerHTML = html;
+}
+function last7MoodDots(){
+  let html='';
+  for(let i=6;i>=0;i--){
+    const iso = addDays(todayISO(), -i);
+    const mood = STATE.moods[iso];
+    const color = mood ? (CONFIG.moods.find(m=>m.id===mood)||{}).color : null;
+    html += `<div class="moodDot" title="${iso}" style="background:${color||'var(--line)'}"></div>`;
+  }
+  return html;
+}
+
+/* =====================================================================
+   RENDER — INSTELLINGEN (incl. Export/Import backup)
+   ===================================================================== */
+function renderSettings(){
+  $('#settingsBody').innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0">
+      <input type="checkbox" id="setPoints" ${STATE.settings.pointsEnabled?'checked':''}> Punten-tab tonen
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0">
+      <input type="checkbox" id="setCountdown" ${STATE.settings.countdownEnabled?'checked':''}> Countdown naar volgend getimed moment op Live
+    </label>
+    <div style="border-top:1px dashed var(--line);margin-top:10px;padding-top:10px">
+      <div class="sectionLabel">Back-up</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Laatste back-up: ${STATE.lastBackup ? fmtDateShort(STATE.lastBackup) : 'nog nooit'}</div>
+      <div class="detailActions">
+        <button id="btnExport">Exporteren (JSON)</button>
+        <button id="btnImport">Importeren (JSON)</button>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.2 · pilot · data blijft lokaal op dit toestel.</div>
+  `;
+}
+
+/* =====================================================================
+   RENDER — ANKER
+   ===================================================================== */
+function renderAnker(){
+  $('#ankerBody').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Kies wat het dichtst in de buurt komt — geen goed of fout antwoord.</div>
+    <div class="feelGrid">
+      <button class="feelBtn" data-feel="moe">😮‍💨 Moe</button>
+      <button class="feelBtn" data-feel="gespannen">😬 Gespannen</button>
+      <button class="feelBtn" data-feel="vlak">😶 Vlak</button>
+      <button class="feelBtn" data-feel="anders">🤔 Anders</button>
+    </div>`;
+}
+function routeAnker(feel){
+  closeOverlay('ankerModal');
+  let focus = 'Feel-better toolkit';
+  if(feel==='moe') focus = 'Fysiek actief';
+  if(feel==='gespannen') focus = 'De-escalatie';
+  renderTerug(focus);
+  openOverlay('terugPanel');
+}
+
+/* ---------- overlays ---------- */
+function openOverlay(id){ $('#overlayBg').classList.remove('hidden'); $('#'+id).classList.remove('hidden'); }
+function closeOverlay(id){ $('#'+id).classList.add('hidden'); if(!$all('.panel:not(.hidden), .modal:not(.hidden)').length) $('#overlayBg').classList.add('hidden'); }
+function closeAllOverlays(){ $all('.panel, .modal').forEach(p=>p.classList.add('hidden')); $('#overlayBg').classList.add('hidden'); $('#monthPopup').classList.add('hidden'); $('#addMenuPopup').classList.add('hidden'); }
+
+/* ---------- toast ---------- */
+function showToast(msg, onUndo){
+  const t = $('#toast');
+  t.innerHTML = `<span>${esc(msg)}</span>${onUndo?'<button id="toastUndo">ongedaan maken</button>':''}`;
+  t.classList.remove('hidden');
+  if(onUndo){ $('#toastUndo').onclick = ()=>{ onUndo(); t.classList.add('hidden'); clearTimeout(t._timer); }; }
+  clearTimeout(t._timer); t._timer = setTimeout(()=>t.classList.add('hidden'), 6000);
+}
+
+/* =====================================================================
+   MASTER RENDER
+   ===================================================================== */
+function renderAll(){
+  $('#btnToday').textContent = fmtDateShort(currentDate) + (currentDate===todayISO()?' · vandaag':'');
+  renderLive(); renderFraming(); renderBuilderList(); renderCalendar(); renderPoints();
+}
+function setView(v){
+  currentView = v;
+  $all('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
+  $all('.view').forEach(s=>s.classList.toggle('active', s.id==='view-'+v));
+  if(v==='live') renderLive();
+  if(v==='calendar') renderCalendar();
+}
+
+/* =====================================================================
+   EVENTS
+   ===================================================================== */
+document.addEventListener('DOMContentLoaded', init);
+
+function init(){
+  loadState();
+  $all('.tab').forEach(t=> t.addEventListener('click', ()=> setView(t.dataset.view)));
+
+  $('#btnPrevDay').addEventListener('click', ()=>{ currentDate = addDays(currentDate,-1); renderAll(); });
+  $('#btnNextDay').addEventListener('click', ()=>{ currentDate = addDays(currentDate,1); renderAll(); });
+  $('#btnToday').addEventListener('click', ()=>{ currentDate = todayISO(); renderAll(); });
+
+  $('#btnLibraryInline').addEventListener('click', ()=>{ renderLibrary(); openOverlay('libraryPanel'); });
+  $('#btnTerug').addEventListener('click', ()=>{ renderTerug(null); openOverlay('terugPanel'); });
+  $('#btnSettings').addEventListener('click', ()=>{ renderSettings(); openOverlay('settingsModal'); });
+  $('#ankerBtn').addEventListener('click', ()=>{ renderAnker(); openOverlay('ankerModal'); });
+  $('#terugTip').addEventListener('click', ()=>{ renderTerug(null); openOverlay('terugPanel'); });
+
+  $('#overlayBg').addEventListener('click', closeAllOverlays);
+  document.addEventListener('click', e=>{ const cx=e.target.closest('[data-close]'); if(cx) closeOverlay(cx.dataset.close); });
+
+  // toevoeg-menu (groene +)
+  $('#btnAddMenu').addEventListener('click', e=>{
+    e.stopPropagation(); renderAddMenu(); $('#addMenuPopup').classList.toggle('hidden');
+  });
+  document.addEventListener('click', e=>{
+    if(!$('#addMenuPopup').classList.contains('hidden') && !e.target.closest('#addMenuPopup') && !e.target.closest('#btnAddMenu')){
+      $('#addMenuPopup').classList.add('hidden');
+    }
+  });
+
+  // legenda toggles
+  document.addEventListener('click', e=>{
+    const lg = e.target.closest('[data-legend]');
+    if(lg){ const box=$('#'+lg.dataset.legend); box.classList.toggle('open'); lg.textContent = box.classList.contains('open')?'legenda ▴':'legenda ▾'; }
+  });
+
+  // library categorie in-/uitklappen
+  document.addEventListener('click', e=>{
+    const cat = e.target.closest('[data-libcat]');
+    if(cat){ const k=cat.dataset.libcat; libraryOpenCats[k] = !(libraryOpenCats[k]!==false); renderLibrary(); }
+  });
+
+  // kalender: weekstrip jump + maandpopup
+  document.addEventListener('click', e=>{
+    const jump = e.target.closest('[data-jump]');
+    if(jump){ currentDate = jump.dataset.jump; $('#monthPopup').classList.add('hidden'); renderAll(); return; }
+    if(e.target.id==='calLabelBtn'){ renderMonthPopup(); $('#monthPopup').classList.toggle('hidden'); return; }
+    if(e.target.id==='btnJumpToday'){ currentDate = todayISO(); $('#monthPopup').classList.add('hidden'); renderAll(); return; }
+  });
+
+  // add item buttons (builder)
+  document.addEventListener('click', e=>{
+    const addBtn = e.target.closest('[data-add]');
+    if(addBtn){
+      const day = getDay(currentDate);
+      const it = newItem(addBtn.dataset.add);
+      it.order = day.items.length; day.items.push(it); it._expanded = true;
+      saveState(); renderAll();
+      $('#addMenuPopup').classList.add('hidden');
+    }
+  });
+
+  // framing
+  document.addEventListener('input', e=>{ const f=e.target.closest('[data-framing]'); if(f && !f.matches('select')){ getDay(currentDate).framing[f.dataset.framing]=f.value; saveState(); } });
+  document.addEventListener('change', e=>{ const f=e.target.closest('select[data-framing]'); if(f){ getDay(currentDate).framing[f.dataset.framing]=f.value; saveState(); } });
+
+  // mood
+  document.addEventListener('click', e=>{
+    const m = e.target.closest('[data-mood]');
+    if(m){ STATE.moods[currentDate]=m.dataset.mood; saveState(); renderReflect(); renderCalendar(); }
+  });
+
+  // motief open/edit
+  document.addEventListener('click', e=>{
+    const mo = e.target.closest('[data-motifopen]');
+    if(mo){
+      const card = mo.closest('.item'); const day = getDay(currentDate);
+      const it = day.items.find(x=>x.id===card.dataset.id);
+      if(it.locked) return;
+      it._motifEditing = true; renderAll();
+      setTimeout(()=>{ const inp=$('.item[data-id="'+it.id+'"] .motifInput'); if(inp){ inp.focus(); } }, 0);
+    }
+  });
+  document.addEventListener('focusout', e=>{
+    const mi = e.target.closest('.motifInput');
+    if(mi){
+      const card = mi.closest('.item'); const day = getDay(currentDate);
+      const it = day.items.find(x=>x.id===card.dataset.id);
+      it._motifEditing = false; saveState(); renderAll();
+    }
+  });
+
+  // generieke item-veld inputs
+  document.addEventListener('input', e=>{
+    const el = e.target.closest('[data-field]');
+    if(el && !el.matches('select') && !el.classList.contains('motifInput')){
+      const card = el.closest('.item'); if(!card) return;
+      const day = getDay(currentDate);
+      const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
+      if(it.locked) return;
+      const field = el.dataset.field;
+      if(field==='durationIdx'){ it.duration = CONFIG.durationSteps[+el.value]; el.closest('.rangeRow').querySelector('.durBadge').textContent = fmtDuration(it.duration); }
+      else { it[field] = el.value; }
+      saveState(); syncTemplate(it);
+    }
+    const mi = e.target.closest('.motifInput');
+    if(mi){
+      const card = mi.closest('.item'); const day=getDay(currentDate);
+      const it = day.items.find(x=>x.id===card.dataset.id);
+      it.why = mi.value; saveState(); syncTemplate(it);
+    }
+  });
+
+  // selects (tag, essentialLink, windDown) + tijd
+  document.addEventListener('change', e=>{
+    const sel = e.target.closest('select[data-field]');
+    if(sel){
+      const card = sel.closest('.item'); if(!card) return;
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
+      if(it.locked) return;
+      const v = sel.dataset.field==='essentialLink' ? (sel.value===''?null:+sel.value) : (sel.dataset.field==='windDown' ? +sel.value : sel.value);
+      it[sel.dataset.field] = v; saveState(); syncTemplate(it); renderAll(); return;
+    }
+    const timeInp = e.target.closest('input[type=time][data-field]');
+    if(timeInp){
+      const card = timeInp.closest('.item'); if(!card) return;
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
+      if(it.locked) return;
+      it.time = timeInp.value; saveState(); syncTemplate(it); renderAll();
+    }
+  });
+
+  // tijd wijzigen rechtstreeks vanuit de Kalender-tijdlijn (flexibele punten)
+  document.addEventListener('change', e=>{
+    const tt = e.target.closest('[data-tltime]');
+    if(tt){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===tt.dataset.tltime);
+      if(it && !it.locked){ it.time = tt.value; saveState(); syncTemplate(it); renderAll(); }
+    }
+  });
+
+  // icoon kiezen
+  document.addEventListener('click', e=>{
+    const ib = e.target.closest('[data-seticon]');
+    if(ib){
+      const card = ib.closest('.item'); const day=getDay(currentDate);
+      const it = day.items.find(x=>x.id===card.dataset.id);
+      if(it.locked) return;
+      it.icon = ib.dataset.seticon; saveState(); syncTemplate(it); renderAll();
+    }
+  });
+
+  // done checkbox (builder-kaart) — afvinken mag altijd, ook vergrendeld
+  document.addEventListener('change', e=>{
+    const chk = e.target.closest('input.done[data-field="done"]');
+    if(chk){
+      const card = chk.closest('.item'); if(!card) return;
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
+      it.done = chk.checked;
+      if(it.done && it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
+      if(it.done && it.isSleep){
+        STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{};
+        STATE.essentialsChecked[currentDate][0]=true; // 7-9 uur slaap
+        STATE.essentialsChecked[currentDate][6]=true; // Slaaphygiëne
+      }
+      saveState(); renderAll();
+    }
+  });
+  // done checkbox (kalender-tijdlijn)
+  document.addEventListener('change', e=>{
+    const tl = e.target.closest('.tlCheck[data-tlid]');
+    if(tl){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===tl.dataset.tlid); if(!it) return;
+      it.done = tl.checked;
+      if(it.done && it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
+      if(it.done && it.isSleep){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][0]=true; STATE.essentialsChecked[currentDate][6]=true; }
+      saveState(); renderAll();
+    }
+  });
+
+  // klaar — volgende (live)
+  document.addEventListener('click', e=>{
+    const d = e.target.closest('[data-donenow]');
+    if(d){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===d.dataset.donenow); if(!it) return;
+      it.done = true;
+      if(it.essentialLink!=null){ STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][it.essentialLink]=true; }
+      saveState(); renderAll();
+    }
+  });
+
+  // reorder / toggles / expand / delete / addsub / savelib / lock
+  document.addEventListener('click', e=>{
+    const card = e.target.closest('.item');
+
+    const moveBtn = e.target.closest('[data-move]');
+    if(moveBtn && card){
+      const day = getDay(currentDate);
+      const items = orderedItems(day).filter(it=>!it.time);
+      const i = items.findIndex(x=>x.id===card.dataset.id);
+      const j = i + (moveBtn.dataset.move==='up'?-1:1);
+      if(i>=0 && j>=0 && j<items.length){ const tmp=items[i].order; items[i].order=items[j].order; items[j].order=tmp; saveState(); renderAll(); }
+      return;
+    }
+    const reqToggle = e.target.closest('[data-toggle="required"]');
+    if(reqToggle && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.required=!it.required; saveState(); renderAll(); return; }
+
+    const recToggle = e.target.closest('[data-toggle="recurring"]');
+    if(recToggle && card){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id);
+      if(it.locked) return;
+      it.recurring = !it.recurring;
+      if(it.recurring){
+        const tid = uid('tpl'); it.recurringTemplateId = tid;
+        STATE.recurringTemplates.push({ templateId:tid, repeatDays:(it.lockSettings.repeatDays||[]).slice(), data:{
+          type:it.type, title:it.title, why:it.why, tag:it.tag, icon:it.icon, time:it.time, location:it.location,
+          message:it.message, duration:it.duration, required:it.required, isSleep:it.isSleep, windDown:it.windDown, essentialLink:it.essentialLink
+        }});
+      } else {
+        STATE.recurringTemplates = STATE.recurringTemplates.filter(t=>t.templateId!==it.recurringTemplateId);
+        it.recurringTemplateId = null;
+      }
+      saveState(); renderAll(); return;
+    }
+
+    const expToggle = e.target.closest('[data-toggle="expand"]');
+    if(expToggle && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); it._expanded=!it._expanded; renderAll(); return; }
+
+    const delBtn = e.target.closest('[data-delete]');
+    if(delBtn && card){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id);
+      if(it.locked) return;
+      const idx = day.items.findIndex(x=>x.id===card.dataset.id);
+      const removed = day.items.splice(idx,1)[0];
+      saveState(); renderAll();
+      showToast('Verwijderd: '+(removed.title||TYPE_LABEL[removed.type]), ()=>{ day.items.splice(idx,0,removed); saveState(); renderAll(); });
+      return;
+    }
+    const addSub = e.target.closest('[data-addsub]');
+    if(addSub && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.subtasks=it.subtasks||[]; it.subtasks.push({text:'',done:false}); saveState(); renderAll(); return; }
+    const subDel = e.target.closest('[data-subdel]');
+    if(subDel && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.subtasks.splice(+subDel.dataset.sub,1); saveState(); renderAll(); return; }
+    const saveLib = e.target.closest('[data-savelib]');
+    if(saveLib && card){
+      const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id);
+      STATE.library.push({ id:uid('lib'), type:it.type, title:it.title||TYPE_LABEL[it.type], why:it.why, tag:it.tag, duration:it.duration, icon:it.icon||'⭐', category:'Eigen blokken' });
+      saveState(); showToast('Opgeslagen in library.'); return;
+    }
+    const openLock = e.target.closest('[data-openlock]');
+    if(openLock && card){ openLockModal(card.dataset.id); return; }
+  });
+
+  // subtaken
+  document.addEventListener('input', e=>{
+    const sub = e.target.closest('[data-subfield="text"]');
+    if(sub){ const card=sub.closest('.item'); const si=+sub.dataset.sub; const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.subtasks[si].text=sub.value; saveState(); }
+  });
+  document.addEventListener('change', e=>{
+    const sub = e.target.closest('[data-subfield="done"]');
+    if(sub){ const card=sub.closest('.item'); const si=+sub.dataset.sub; const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); it.subtasks[si].done=sub.checked; saveState(); }
+  });
+
+  // library panel
+  document.addEventListener('click', e=>{
+    const addL = e.target.closest('[data-liblib-add]');
+    if(addL){
+      const block = STATE.library.find(b=>b.id===addL.dataset.liblibAdd);
+      const day = getDay(currentDate); const it = newItem(block.type);
+      Object.assign(it, { title:block.title, why:block.why, tag:block.tag, duration:block.duration, icon:block.icon,
+        isSleep:!!block.isSleep, time:block.time||it.time, windDown:block.windDown||60, essentialLink: block.essentialLink!=null?block.essentialLink:null });
+      it.order = day.items.length; day.items.push(it);
+      saveState(); renderAll(); showToast('Toegevoegd aan '+fmtDateShort(currentDate)+'.'); return;
+    }
+    const delL = e.target.closest('[data-liblib-del]');
+    if(delL){ STATE.library = STATE.library.filter(b=>b.id!==delL.dataset.liblibDel); saveState(); renderLibrary(); return; }
+  });
+
+  // terug-panel: tag legend edits + display mode
+  document.addEventListener('input', e=>{
+    const codeI = e.target.closest('[data-tagcode]'); if(codeI){ STATE.tags[codeI.dataset.tagcode].code=codeI.value; saveState(); return; }
+    const nameI = e.target.closest('[data-tagname]'); if(nameI){ STATE.tags[nameI.dataset.tagname].name=nameI.value; saveState(); return; }
+  });
+  document.addEventListener('change', e=>{
+    const colorS = e.target.closest('[data-tagcolor]'); if(colorS){ STATE.tags[colorS.dataset.tagcolor].color=colorS.value; saveState(); renderAll(); return; }
+    const dispS = e.target.closest('#tagDisplaySelect'); if(dispS){ STATE.settings.tagDisplayMode=dispS.value; saveState(); renderAll(); return; }
+  });
+
+  // instellingen + back-up
+  document.addEventListener('change', e=>{
+    if(e.target.id==='setPoints'){ STATE.settings.pointsEnabled=e.target.checked; saveState(); renderAll(); }
+    if(e.target.id==='setCountdown'){ STATE.settings.countdownEnabled=e.target.checked; saveState(); renderAll(); }
+  });
+  document.addEventListener('click', e=>{
+    if(e.target.id==='btnExport'){
+      const blob = new Blob([JSON.stringify(STATE,null,2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download = 'CR4-Daybuilder-backup-'+todayISO()+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      STATE.lastBackup = todayISO(); saveState(); renderSettings(); renderBackupReminder();
+    }
+    if(e.target.id==='btnImport'){ $('#importFile').click(); }
+    if(e.target.closest('[data-dismissbackup]')){ STATE.backupReminderDismissedOn = todayISO(); saveState(); renderBackupReminder(); }
+    if(e.target.closest('[data-opensettings]')){ renderSettings(); openOverlay('settingsModal'); }
+  });
+  $('#importFile').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        STATE = Object.assign(defaultState(), parsed);
+        STATE.settings = Object.assign(defaultState().settings, parsed.settings||{});
+        saveState(); renderAll(); showToast('Back-up geïmporteerd.');
+      }catch(err){ showToast('Kon bestand niet lezen.'); }
+    };
+    reader.readAsText(file);
+    e.target.value='';
+  });
+
+  // anker
+  document.addEventListener('click', e=>{ const fb=e.target.closest('[data-feel]'); if(fb) routeAnker(fb.dataset.feel); });
+
+  // punten essentials
+  document.addEventListener('change', e=>{
+    const ess = e.target.closest('[data-ess]');
+    if(ess){ const i=+ess.dataset.ess; STATE.essentialsChecked[currentDate]=STATE.essentialsChecked[currentDate]||{}; STATE.essentialsChecked[currentDate][i]=ess.checked; saveState(); renderPoints(); }
+  });
+
+  // dag-afsluiting
+  document.addEventListener('input', e=>{
+    const cr = e.target.closest('[data-closeresult]');
+    if(cr){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===cr.dataset.closeresult); if(it){ it.resultActual=cr.value; saveState(); } }
+    if(e.target.id==='oneLinerInput'){ getDay(currentDate).closing.oneLiner=e.target.value; saveState(); }
+  });
+  document.addEventListener('change', e=>{
+    if(e.target.id==='minDoelChk'){ getDay(currentDate).closing.minDoelMet=e.target.checked; saveState(); renderCalendar(); }
+  });
+  document.addEventListener('click', e=>{
+    const rt = e.target.closest('[data-rating]');
+    if(rt){ getDay(currentDate).closing.dayRating=+rt.dataset.rating; saveState(); renderClosing(); }
+    if(e.target.id==='btnCloseDay'){ getDay(currentDate).closing.closed=true; saveState(); renderClosing(); showToast('Dag afgesloten.'); }
+  });
+
+  // lock modal
+  document.addEventListener('click', e=>{
+    const dayBtn = e.target.closest('[data-lockday]'); if(dayBtn){ dayBtn.classList.toggle('on'); return; }
+    if(e.target.id==='btnSaveLock'){ saveLockFromModal(); }
+    if(e.target.id==='btnUnlock'){ unlockFromModal(); }
+  });
+
+  // slepen om de tijd van een flexibel punt te wijzigen (muis + touch via Pointer Events)
+  let dragState = null;
+  document.addEventListener('pointerdown', e=>{
+    const handle = e.target.closest('.tlHandle');
+    if(!handle) return;
+    const row = handle.closest('.tlRow');
+    dragState = { id: row.dataset.id };
+    row.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e=>{
+    if(!dragState) return;
+    const wrap = $('#dayTimeline'); if(!wrap) return;
+    const rows = $all('.tlRow', wrap);
+    $all('.tlRow.dragOver', wrap).forEach(r=>r.classList.remove('dragOver'));
+    const under = rows.find(r=>{ const rect=r.getBoundingClientRect(); return e.clientY>=rect.top && e.clientY<=rect.bottom; });
+    if(under && under.dataset.id!==dragState.id) under.classList.add('dragOver');
+  });
+  document.addEventListener('pointerup', e=>{
+    if(!dragState) return;
+    const wrap = $('#dayTimeline');
+    const rows = wrap ? $all('.tlRow', wrap) : [];
+    const under = rows.find(r=>{ const rect=r.getBoundingClientRect(); return e.clientY>=rect.top && e.clientY<=rect.bottom; });
+    $all('.tlRow').forEach(r=>{ r.classList.remove('dragging'); r.classList.remove('dragOver'); });
+    if(under && under.dataset.id!==dragState.id){
+      const day = getDay(currentDate);
+      const dragIt = day.items.find(x=>x.id===dragState.id);
+      const targetIt = day.items.find(x=>x.id===under.dataset.id);
+      if(dragIt && targetIt && !dragIt.locked){
+        const rect = under.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height/2;
+        if(targetIt.time) dragIt.time = targetIt.time;
+        dragIt.order = before ? (targetIt.order||0) - 0.5 : (targetIt.order||0) + 0.5;
+        saveState(); syncTemplate(dragIt); renderAll();
+      }
+    }
+    dragState = null;
+  });
+
+  renderAll();
+
+  // klok-gestuurde auto-refresh (alleen de zichtbare, tijdgevoelige tab)
+  setInterval(()=>{
+    if(currentView==='live') renderLive();
+    if(currentView==='calendar') renderCalendar();
+  }, 60000);
+
+  // PWA: service worker registreren voor offline-gebruik (alleen via http/https,
+  // niet via file://; zie LEESMIJ.txt voor installatie-instructies).
+  if('serviceWorker' in navigator && (location.protocol==='http:' || location.protocol==='https:')){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+    });
+  }
+}
+
+/* ---------- lock modal ---------- */
+let lockTargetId = null;
+function openLockModal(itemId){
+  lockTargetId = itemId;
+  const day = getDay(currentDate);
+  const it = day.items.find(x=>x.id===itemId);
+  $('#lockBody').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${it.locked ? 'Vergrendeld — niets kan gewijzigd of verwijderd worden tot ontgrendelen (ook niet via toetsenbord). Afvinken blijft wel kunnen.' : 'Nog niet vergrendeld. Herhaaldagen/tijd hieronder gelden ook voor ∞ Herhalend.'}</div>
+    <label style="font-size:10px;color:var(--muted)">Herhaaldagen (leeg = elke dag)</label>
+    <div class="lockGrid">${WEEKDAYS_MON0.map((d,i)=>`<button data-lockday data-dayidx="${i}" class="${(it.lockSettings.repeatDays||[]).includes(i)?'on':''}">${d}</button>`).join('')}</div>
+    <label style="font-size:10px;color:var(--muted);margin-top:8px;display:block">Tijd</label>
+    <input type="time" id="lockTime" value="${it.lockSettings.repeatTime||''}" style="border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px">
+    <div class="detailActions">
+      <button id="btnSaveLock">${it.locked?'Herhaling opslaan':'Vergrendelen & opslaan'}</button>
+      ${it.locked?'<button id="btnUnlock">Ontgrendelen</button>':''}
+    </div>
+  `;
+  openOverlay('lockModal');
+}
+function saveLockFromModal(){
+  const day = getDay(currentDate);
+  const it = day.items.find(x=>x.id===lockTargetId);
+  const dayButtons = $all('#lockBody [data-lockday].on');
+  it.lockSettings.repeatDays = dayButtons.map(b=>+b.dataset.dayidx);
+  it.lockSettings.repeatTime = $('#lockTime').value;
+  it.locked = true;
+  if(it.recurring && it.recurringTemplateId){
+    const t = STATE.recurringTemplates.find(x=>x.templateId===it.recurringTemplateId);
+    if(t) t.repeatDays = it.lockSettings.repeatDays.slice();
+  }
+  saveState(); closeOverlay('lockModal'); renderAll();
+}
+function unlockFromModal(){
+  const day = getDay(currentDate);
+  const it = day.items.find(x=>x.id===lockTargetId);
+  it.locked = false;
+  saveState(); closeOverlay('lockModal'); renderAll();
+}
+</script>
+</body>
+</html>
