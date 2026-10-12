@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>CR.4 Daybuilder v1.2 — pilot</title>
+<title>CR.4 Daybuilder v1.3 — pilot</title>
 
 <!-- PWA: installeerbaar + offline (zie LEESMIJ.txt voor installatie) -->
 <link rel="manifest" href="manifest.json">
@@ -358,7 +358,10 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
       <div class="tipLine" id="terugTip"><span>Vastgelopen?</span><span>›</span></div>
 
       <div class="card">
-        <div class="sectionLabel"><span class="statusLine"><span class="statusDot" id="statusDot"></span><span id="statusText">Status</span></span></div>
+        <div class="sectionLabel">
+          <span class="statusLine"><span class="statusDot" id="statusDot"></span><span id="statusText">Status</span></span>
+          <span id="calPoints" style="margin-left:auto"></span>
+        </div>
         <div class="timelineWrap" id="dayTimeline"></div>
       </div>
 
@@ -377,7 +380,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 
   <button id="ankerBtn" title="Anker — ik loop even vast">⚓</button>
 
-  <footer class="tiny">CR.4 Daybuilder v1.2 · pilot · alles lokaal in je browser · offline-geschikt</footer>
+  <footer class="tiny">CR.4 Daybuilder v1.3 · pilot · alles lokaal in je browser · offline-geschikt</footer>
 </div>
 
 <div id="overlayBg" class="overlayBg hidden"></div>
@@ -407,8 +410,14 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
   <div id="lockBody"></div>
 </div>
 
+<div id="dagImportModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Dag toevoegen</span><button class="closeX" data-close="dagImportModal">×</button></div>
+  <div id="dagImportBody"></div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 <input type="file" id="importFile" accept="application/json" class="hidden">
+<input type="file" id="importDayFile" accept="application/json,.json" class="hidden">
 
 <script>
 /* =====================================================================
@@ -532,6 +541,7 @@ function $(sel, root){ return (root||document).querySelector(sel); }
 function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
 function uid(p){ return (p||'id')+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pluralOnderdeel(n){ return n===1 ? '1 onderdeel' : n+' onderdelen'; }
 function pad(n){ return n<10?'0'+n:''+n; }
 function toISO(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function fromISO(iso){ const p=iso.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
@@ -1030,6 +1040,7 @@ function renderCalendar(){
   const status = computeStatus(day, currentDate);
   $('#statusDot').style.background = STATUS_COLOR[status];
   $('#statusText').textContent = STATUS_LABEL[status];
+  renderCalendarPoints();
 
   const items = orderedItems(day);
   if(items.length===0){
@@ -1121,6 +1132,17 @@ function renderClosing(){
 /* =====================================================================
    RENDER — PUNTEN
    ===================================================================== */
+/* Alleen-bekijken puntenscore van de geopende dag, getoond in Kalender. */
+function renderCalendarPoints(){
+  const el = $('#calPoints');
+  if(!el) return;
+  if(!STATE.settings.pointsEnabled){ el.innerHTML = ''; return; }
+  const checked = STATE.essentialsChecked[currentDate] || {};
+  const total = CONFIG.essentials.length;
+  const done = CONFIG.essentials.filter((_,i)=>checked[i]).length;
+  el.innerHTML = `<span class="durBadge">Punten ${done}/${total}</span>`;
+}
+
 function renderPoints(){
   if(!STATE.settings.pointsEnabled){
     $('#pointsCard').innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:30px 10px">Punten-tab staat uit. Zet hem aan via instellingen (⚙).</div>`;
@@ -1248,9 +1270,11 @@ function renderSettings(){
       <div class="detailActions">
         <button id="btnExport">Exporteren (JSON)</button>
         <button id="btnImport">Importeren (JSON)</button>
+        <button id="btnImportDay">Dag toevoegen</button>
       </div>
+      <div style="font-size:10px;color:var(--faint);margin-top:6px">"Dag toevoegen" voegt één dag uit een apart dagbestand toe aan je bestaande data — niets anders wordt aangepast.</div>
     </div>
-    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.2 · pilot · data blijft lokaal op dit toestel.</div>
+    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.3 · pilot · data blijft lokaal op dit toestel.</div>
   `;
 }
 
@@ -1609,6 +1633,7 @@ function init(){
       STATE.lastBackup = todayISO(); saveState(); renderSettings(); renderBackupReminder();
     }
     if(e.target.id==='btnImport'){ $('#importFile').click(); }
+    if(e.target.id==='btnImportDay'){ $('#importDayFile').click(); }
     if(e.target.closest('[data-dismissbackup]')){ STATE.backupReminderDismissedOn = todayISO(); saveState(); renderBackupReminder(); }
     if(e.target.closest('[data-opensettings]')){ renderSettings(); openOverlay('settingsModal'); }
   });
@@ -1625,6 +1650,16 @@ function init(){
     };
     reader.readAsText(file);
     e.target.value='';
+  });
+  $('#importDayFile').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    handleDagImportFile(file);
+    e.target.value='';
+  });
+  document.addEventListener('click', e=>{
+    if(e.target.id==='btnDagImportAdd'){ closeOverlay('dagImportModal'); if(pendingDagImport) commitDagImport(pendingDagImport.datum, pendingDagImport.items, 'add'); pendingDagImport=null; }
+    if(e.target.id==='btnDagImportOverwrite'){ closeOverlay('dagImportModal'); if(pendingDagImport) commitDagImport(pendingDagImport.datum, pendingDagImport.items, 'overwrite'); pendingDagImport=null; }
+    if(e.target.id==='btnDagImportCancel'){ closeOverlay('dagImportModal'); pendingDagImport=null; }
   });
 
   // anker
@@ -1751,6 +1786,83 @@ function unlockFromModal(){
   const it = day.items.find(x=>x.id===lockTargetId);
   it.locked = false;
   saveState(); closeOverlay('lockModal'); renderAll();
+}
+
+/* =====================================================================
+   DAG TOEVOEGEN — één dag uit een apart dagbestand toevoegen aan de
+   bestaande data. Vervangt/verwijdert nooit andere dagen, instellingen,
+   punten, library of stemmingen.
+   ===================================================================== */
+const DAG_IMPORT_TYPES = ['flex','vast','werkblok','joy','health'];
+let pendingDagImport = null; // {datum, items}
+
+/* Geeft null terug als geldig, anders een korte Nederlandse foutmelding. */
+function validateDagJSON(obj){
+  if(!obj || typeof obj!=='object') return 'Geen geldig bestand.';
+  if(obj.type !== 'cr4-dag') return 'Dit is geen CR.4-dagbestand.';
+  if(obj.versie !== 1) return 'Onbekende versie van dit dagbestand.';
+  if(typeof obj.datum!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(obj.datum)) return 'Geen geldige datum in het bestand.';
+  if(!Array.isArray(obj.items) || obj.items.length===0) return 'Geen items gevonden in het bestand.';
+  for(const raw of obj.items){
+    if(!DAG_IMPORT_TYPES.includes(raw.soort)) return 'Onbekend itemtype: "'+(raw.soort||'?')+'".';
+    if(raw.tijd!=null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw.tijd)) return 'Ongeldige tijd bij "'+(raw.titel||'een item')+'".';
+    if(raw.duur!=null && (typeof raw.duur!=='number' || raw.duur<0)) return 'Ongeldige duur bij "'+(raw.titel||'een item')+'".';
+  }
+  return null;
+}
+function itemFromDagJSON(raw){
+  const it = newItem(raw.soort);
+  it.title = raw.titel || '';
+  if(raw.tijd) it.time = raw.tijd;
+  if(raw.duur!=null) it.duration = raw.duur;
+  if(raw.locatie) it.location = raw.locatie;
+  if(raw.motief) it.why = raw.motief;
+  return it;
+}
+function handleDagImportFile(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let obj;
+    try{ obj = JSON.parse(reader.result); }
+    catch(e){ showToast('Kon bestand niet lezen — geen geldig JSON-bestand.'); return; }
+    const err = validateDagJSON(obj);
+    if(err){ showToast(err); return; }
+    const items = obj.items.map(itemFromDagJSON);
+    const existing = STATE.days[obj.datum];
+    if(existing && existing.items.length){
+      pendingDagImport = { datum: obj.datum, items };
+      openDagImportChoiceModal(obj.datum, items.length, existing.items.length);
+    } else {
+      commitDagImport(obj.datum, items, 'add');
+    }
+  };
+  reader.onerror = ()=>{ showToast('Kon bestand niet lezen.'); };
+  reader.readAsText(file);
+}
+function openDagImportChoiceModal(datum, newCount, existingCount){
+  $('#dagImportBody').innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+      ${esc(fmtDateShort(datum))} heeft al ${pluralOnderdeel(existingCount)}.
+      Wat wil je doen met de ${newCount} nieuwe uit dit bestand?
+    </div>
+    <div class="detailActions">
+      <button id="btnDagImportAdd">Toevoegen aan bestaande dag</button>
+      <button id="btnDagImportOverwrite">Overschrijven</button>
+      <button id="btnDagImportCancel">Annuleren</button>
+    </div>
+  `;
+  openOverlay('dagImportModal');
+}
+function commitDagImport(datum, items, mode){
+  const day = getDay(datum);
+  if(mode==='overwrite') day.items = [];
+  const startOrder = day.items.length;
+  items.forEach((it,i)=>{ it.order = startOrder+i; day.items.push(it); });
+  saveState();
+  currentDate = datum;
+  setView('calendar');
+  renderAll();
+  showToast(pluralOnderdeel(items.length)+' toegevoegd aan '+fmtDateShort(datum)+'.');
 }
 </script>
 </body>

@@ -4,7 +4,7 @@
  * daarna volledig offline werkt. Geen externe afhankelijkheden, geen
  * push-infrastructuur — alleen offline-cache + installeerbaarheid.
  */
-const CACHE_NAME = 'cr4-daybuilder-v1.2';
+const CACHE_NAME = 'cr4-daybuilder-v1.3';
 const ASSETS = [
   './',
   './index.html',
