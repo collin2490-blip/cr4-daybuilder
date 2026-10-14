@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>CR.4 Daybuilder v1.4 — pilot</title>
+<title>CR.4 Daybuilder v1.5</title>
 
 <!-- PWA: installeerbaar + offline (zie LEESMIJ.txt voor installatie) -->
 <link rel="manifest" href="manifest.json">
@@ -43,6 +43,39 @@
     Weekend, ...) een voorgeprogrammeerd dagsjabloon.
 11. (v1.4) Slot: in de app duidelijker maken voor nieuwe gebruikers
     (nu een stipje dat gloeit als het vergrendeld is).
+12. (v1.5) Geparkeerd voor de app: slaapregel ("is dit het waard
+    vanavond?"), volledige RRT-module met werkblad + filtertabel en GA
+    die de vijf ridders begeleidt, routine-selectie per week, in-app
+    scannen van het dagprogramma, pratende GA, Dag-evaluatie, mini-CR.9,
+    dagbrief-generator (zelf / GA / generator), automatische cloud-flow
+    (export + foto -> nieuwe dag) — die laatste pas als data en code
+    gescheiden en privé zijn.
+=====================================================================
+-->
+
+<!--
+=====================================================================
+ INSTRUCTIE VOOR CLAUDE — FOTO VAN EEN DAGPROGRAMMA -> DAG-JSON
+=====================================================================
+ Krijg je een foto van een dagprogramma (eventueel samen met dit
+ bestand of een export ervan)? Maak dan één JSON-bestand, naam
+ JJJJ-MM-DD.json, in exact dit formaat:
+
+ {"type":"cr4-dag","versie":1,"datum":"JJJJ-MM-DD","items":[
+   {"soort":"vast","titel":"Dagopening","tijd":"09:15","duur":45,
+    "locatie":"(optioneel)","motief":"(optioneel)","spoor":"agenda"}
+ ]}
+
+ - soort: vast (programma/afspraak) | flex (vrij/flexibel) |
+   werkblok | joy | health
+ - spoor (optioneel): "essentials" voor vaste dagdingen zoals ontbijt,
+   lunch, diner, slaap/rust; anders weglaten (= agenda). Zonder spoor
+   herkent de app ontbijt/lunch/diner/slaap/rust zelf.
+ - tijd HH:MM (24u), duur in minuten (eindtijd - begintijd).
+ - Namen van begeleiders tussen haakjes in de titel, bv.
+   "Yoga (Veerle)". Niets verzinnen; onleesbaar = weglaten.
+ - De gebruiker importeert via Instellingen -> Bestand toevoegen.
+   Dat VOEGT de dag toe en vervangt niets.
 =====================================================================
 -->
 
@@ -395,6 +428,91 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 .ctmEntry .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:800;margin-right:4px}
 .ctmEntry button{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:12px}
 
+/* ===================== v1.5 ===================== */
+#app{padding-right:34px}
+/* tri-state stip: leeg / gedaan (groen of blauw) / niet gedaan (grijs) */
+.tri{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--faint);background:transparent;flex:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.tri.done{background:var(--good);border-color:var(--good)}
+.tri.done.blue{background:var(--blue);border-color:var(--blue)}
+.tri.no{background:#c3c6cc;border-color:#c3c6cc}
+.triRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px;cursor:pointer;user-select:none}
+.triRow.isno .n{color:var(--faint)}
+.triRow .n small{color:var(--faint);font-size:10px}
+.triRow.opt .n{color:var(--muted)}
+:root{--blue:#5f86b8}
+/* verticale gestapelde puntenbalk */
+.hrTop{display:flex;gap:14px;align-items:flex-end}
+.vbar{width:26px;height:118px;border:1px solid var(--line);border-radius:7px;background:var(--panel-alt);display:flex;flex-direction:column-reverse;overflow:hidden;flex:none;position:relative}
+.vbar i{display:block;width:100%;transition:height .35s}
+.vbar i.g{background:var(--good)} .vbar i.b{background:var(--blue)}
+.vbar .mid{position:absolute;left:0;right:0;top:50%;border-top:1px dashed rgba(0,0,0,.12)}
+.hrSum{font-size:11px;color:var(--muted);line-height:1.6}
+.hrSum b{color:var(--ink)}
+.hrLegend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:6px}
+.hrLegend span{display:inline-flex;align-items:center;gap:4px}
+.lgDot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.weekStack{display:flex;gap:5px;align-items:flex-end;margin-left:auto}
+.wsCol{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wsBar{width:9px;height:44px;border:1px solid var(--line);border-radius:3px;background:var(--panel-alt);display:flex;flex-direction:column-reverse;overflow:hidden}
+.wsBar i{display:block;width:100%}
+.wsBar i.g{background:var(--good)} .wsBar i.b{background:var(--blue)}
+.wsLbl{font-size:8px;color:var(--faint)}
+.dagdeelHead{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800;margin:10px 0 2px}
+.twoCol{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.twoCol .triRow{font-size:11px}
+/* essentials-spoor in de kalender */
+.essChip{font-size:9px;border:1px dashed var(--line);border-radius:999px;padding:2px 6px;color:var(--faint);cursor:pointer;background:transparent}
+.essChip.on{border-style:solid;border-color:var(--good);color:var(--good)}
+.tlRow.isEss .tlNum{background:#eef3ec;border-color:#cfdccb;color:var(--good)}
+.trackTag{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--good);font-weight:800;margin-left:4px}
+/* Live */
+.freeBox .cur-title{color:var(--muted)}
+.skipBtn{margin-top:8px;margin-left:6px;border:1px solid var(--line);color:var(--muted);background:transparent;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.doneList{margin-top:8px}
+.doneHead{display:flex;justify-content:space-between;cursor:pointer;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:800;padding:4px 2px}
+.doneRow{font-size:11px;color:var(--muted);padding:3px 2px;border-bottom:1px dashed var(--line);display:flex;gap:6px}
+.doneRow .t{color:var(--faint);width:36px;flex:none}
+.doneRow.no{color:var(--faint)}
+.skipTag{font-size:9px;color:var(--faint);margin-left:4px}
+.item.isskip .titleInput{color:var(--faint)}
+/* dagbrief */
+.briefBtn{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto 10px;border:0;background:transparent;color:var(--accent);font-size:11px;cursor:pointer}
+.briefBtn .env{font-size:14px}
+.briefText{white-space:pre-line;font-size:15px;line-height:1.65;color:var(--ink);text-align:center;font-family:Georgia,"Times New Roman",serif;padding:6px 4px}
+.briefNr{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--faint);font-weight:800;text-align:center;margin-bottom:6px}
+.ornament{display:flex;justify-content:center;margin:14px 0 10px;color:var(--faint)}
+.dayText{font-size:13px;font-style:italic;color:var(--muted);text-align:center;line-height:1.55;font-family:Georgia,"Times New Roman",serif}
+/* RRT */
+.rrtStep{margin:8px 0}
+.rrtStep .q{font-size:12px;font-weight:700;color:var(--ink)}
+.rrtStep input{width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:12px;margin-top:3px;background:var(--panel-alt)}
+.rrtDest{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rrtDest button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 9px;font-size:11px;cursor:pointer}
+.rrtDest button.on{border-color:var(--accent);color:var(--accent);font-weight:800}
+.rrtNote{font-size:10px;color:var(--faint);margin-top:10px;line-height:1.4}
+.ridder{font-size:11px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.ridder b{display:block;font-size:11px;color:var(--ink)}
+.ridder span{color:var(--muted)}
+/* wimpels */
+#wimpels{position:fixed;right:0;top:120px;display:flex;flex-direction:column;gap:7px;z-index:25}
+.wimpel{position:relative;border:0;background:var(--accent);color:#fff;font-size:9px;font-weight:800;height:20px;width:34px;padding:0 0 0 9px;text-align:left;cursor:pointer;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,7px 75%,4px 50%,7px 25%);opacity:.85;-webkit-user-select:none;user-select:none}
+.wimpel:nth-child(2){background:var(--good)} .wimpel:nth-child(3){background:#9b8db0} .wimpel:nth-child(4){background:var(--warn)}
+.updateRow{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--faint);margin:-2px 2px 8px}
+.updateRow a{color:var(--accent);text-decoration:none;font-weight:700;cursor:pointer}
+.bpRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bpRow button{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:3px 9px;font-size:10px;color:var(--muted);cursor:pointer}
+.rtEdit{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.rtEdit span{flex:1}
+.rtEdit button{border:0;background:transparent;color:var(--faint);cursor:pointer;font-size:12px}
+.rtEdit .optT{font-size:9px;border:1px solid var(--line);border-radius:999px;padding:1px 6px}
+.rtEdit .optT.on{color:var(--accent);border-color:var(--accent)}
+
+/* Live: item ervoor en erna in een eigen kaartje (v1.5) */
+.nowSide{opacity:1;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow);padding:8px 12px;color:var(--muted);text-align:center}
+.nowSide .sideLbl{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);font-weight:800;margin-bottom:2px}
+.nowSide b{font-weight:700;color:var(--muted)}
+.mindful{text-align:center;font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:12px;color:var(--faint);margin:12px 0 2px;letter-spacing:.02em}
+
 @media(min-width:720px){#app{max-width:760px}}
 </style>
 </head>
@@ -418,7 +536,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
     <button class="tab" data-view="builder">Bouwen</button>
     <button class="tab active" data-view="live">Live</button>
     <button class="tab" data-view="calendar">Kalender</button>
-    <button class="tab" id="tabPoints" data-view="points">Punten</button>
+    <button class="tab" id="tabPoints" data-view="points">Habits</button>
   </nav>
 
   <main id="main">
@@ -429,12 +547,15 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
       <div id="backupReminderBox"></div>
       <div id="sleepBannerBox"></div>
       <div id="intentBox"></div>
+      <div id="briefBtnBox"></div>
       <div id="allDayLive"></div>
       <div class="nowStack">
         <div class="nowSide" id="nowPrev"></div>
         <div class="nowCurrent" id="nowCurrentBox"></div>
         <div class="nowSide" id="nowNext"></div>
       </div>
+      <div class="mindful" id="mindfulLine">Be mindful, be present.</div>
+      <div id="doneListBox"></div>
 
       <div class="card" style="margin-top:10px">
         <div class="sectionLabel">Mini-reflectie — 1 tik</div>
@@ -446,6 +567,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 
     <!-- ================= BOUWEN ================= -->
     <section id="view-builder" class="view">
+      <div class="updateRow" id="updateRow"></div>
       <div class="card">
         <div class="sectionLabel">Framing</div>
         <div class="framing" id="framingBox"></div>
@@ -461,6 +583,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
         </div>
         <div id="addMenuPopup" class="addMenuPopup hidden"></div>
         <div id="builderList"></div>
+        <div class="bpRow" id="bpRow"></div>
       </div>
     </section>
 
@@ -501,8 +624,9 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
   </main>
 
   <button id="ankerBtn" title="Anker — ik loop even vast">⚓</button>
+  <div id="wimpels"></div>
 
-  <footer class="tiny">CR.4 Daybuilder v1.4 · pilot · alles lokaal in je browser · offline-geschikt</footer>
+  <footer class="tiny">CR.4 Daybuilder v1.5 · alles lokaal in je browser · offline-geschikt</footer>
 </div>
 
 <div id="overlayBg" class="overlayBg hidden"></div>
@@ -538,7 +662,7 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
 </div>
 
 <div id="poolModal" class="modal hidden">
-  <div class="panelHead"><span class="t">Punten bewerken</span><button class="closeX" data-close="poolModal">×</button></div>
+  <div class="panelHead"><span class="t">Habits bewerken</span><button class="closeX" data-close="poolModal">×</button></div>
   <div id="poolBody"></div>
 </div>
 
@@ -547,9 +671,24 @@ footer.tiny{text-align:center;font-size:10px;color:var(--faint);margin-top:16px}
   <div id="dagImportBody"></div>
 </div>
 
+<div id="briefModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Bericht aan mezelf</span><button class="closeX" data-close="briefModal">×</button></div>
+  <div id="briefBody"></div>
+</div>
+
+<div id="routineModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Routine bewerken</span><button class="closeX" data-close="routineModal">×</button></div>
+  <div id="routineBody"></div>
+</div>
+
+<div id="bpModal" class="modal hidden">
+  <div class="panelHead"><span class="t">Dagblueprint</span><button class="closeX" data-close="bpModal">×</button></div>
+  <div id="bpBody"></div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 <input type="file" id="importFile" accept="application/json" class="hidden">
-<input type="file" id="importDayFile" accept="application/json,.json" class="hidden">
+<input type="file" id="importDayFile" accept="application/json,.json" multiple class="hidden">
 
 <script>
 /* =====================================================================
@@ -561,6 +700,22 @@ const CONFIG = {
   // Werk je online via een nieuwe GitHub Pages/Netlify-locatie, gebruik
   // dan éénmalig Exporteren in v1.1 -> Importeren hier in v1.2.
   storageKey: 'cr4_daybuilder_v11',
+  version: '1.5',
+  // Waar de nieuwste versie live staat (knop bovenaan Bouwen).
+  updateUrl: 'https://collin2490-blip.github.io/cr4-daybuilder/',
+
+  // Wimpels (zijbalk): snel naar je favoriete modules. Vul bij url de
+  // link naar de module in; leeg = "nog niet gekoppeld".
+  wimpels: [
+    {code:'CR.1', name:'Het Echte Zelf', url:''},
+    {code:'CR.2', name:'Life Decisions', url:''},
+    {code:'CR.7', name:'CR.7', url:''},
+    {code:'CR.9', name:'Sober Platform', url:''}
+  ],
+
+  // Titels die bij Dag toevoegen automatisch in het Essentials-spoor
+  // (vaste dagdingen) komen als het bestand geen "spoor" meegeeft.
+  essTitleWords: ['ontbijt','lunch','diner','avondeten','slaap','slapen','rust','bedtijd'],
 
   palette: {
     slate:'#7c8798', dustyblue:'#6f8fae', sage:'#7f9b7a', moss:'#8a9a6b',
@@ -584,14 +739,14 @@ const CONFIG = {
 
   // CR.1 Essentials — de POOL waaruit je elke week 10 kiest (Punten-tab).
   // id's e0..e9 komen overeen met de oude v1.3-lijst, zodat oude punten
-  // blijven kloppen. twice:true = pas behaald bij 2x (teller 0/2).
+  // blijven kloppen. v1.5: geen tellers meer — één vinkje per habit.
   essentialPool: [
     {id:'e0', name:'7–9 uur slaap'}, {id:'e1', name:'Buiten bij opstaan'},
     {id:'e2', name:'Buiten voor slapen'}, {id:'e3', name:'Bewegen'},
     {id:'e4', name:'Gezonde voeding'}, {id:'e5', name:'Mediteren'},
     {id:'e6', name:'Slaaphygiëne'}, {id:'e7', name:'Supplementen'},
     {id:'e8', name:'Wandelen'}, {id:'e9', name:'Water'},
-    {id:'bc2', name:'Bewust contact (2x)', twice:true}
+    {id:'bc2', name:'Bewust contact (2x)'}
   ],
   pointsPerWeek: 10,
 
@@ -638,8 +793,32 @@ const CONFIG = {
   // Uitleg achter de ?-icoontjes (alleen bij punten die niet vanzelf spreken).
   help: {
     intentie: 'Waar wil je dat deze dag om draait? Eén zin is genoeg.',
-    dagdoel: 'Limiet = meer dan dit is overdrive, dan stop je. Minimum = dit wil je in ieder geval halen. Toon: balans, nooit druk.',
-    dagstructuur: 'Wat voor soort dag is het? Dit helpt om de dag (en later je GA) goed af te stemmen.'
+    dagdoel: 'Limiet = meer dan dit is overdrive, dan stop je. Minimum = dit wil je in ieder geval halen.',
+    dagstructuur: 'Wat voor soort dag is het? Dit helpt om de dag (en later je GA) goed af te stemmen.',
+    habits: 'Habits zijn je Points Up: kleine gezonde gewoontes die je basis langzaam omhoog brengen. Eén keer telt nauwelijks. Wat je elke dag doet, telt wel.',
+    routine: 'Je CR.1-routine per dagdeel. Tik: leeg → gedaan → niet gedaan → leeg. Optionele punten tellen mee als je ze doet, maar kosten niets als je ze overslaat.',
+    rrt: 'Een vaste denkroute voor spanning, twijfel, impuls of een binnenkomende prikkel: eerst rust, dan feiten, dan één bewuste keuze.'
+  },
+
+  // RRT — Ridders van de Ronde Tafel (mini-versie)
+  rrt: {
+    intro: 'Niet alles wat binnenkomt vraagt om een directe reactie.',
+    stappen: [
+      {k:'veilig', icon:'🛡️', q:'Ben ik veilig?'},
+      {k:'feit',   icon:'👓', q:'Wat is het feit?', ph:'Niet wat ik vrees — wat er echt is'},
+      {k:'stap',   icon:'🧭', q:'Wat is de kleinste veilige stap?'}
+    ],
+    bestemmingen: ['Nu doen','Inplannen','Loslaten','Delegeren','Hulp inschakelen'],
+    zin: 'Eerst veilig en rustig. Dan één feit. Daarna één kleine bestemming.',
+    hulp: 'Bel of spreek iemand die je vertrouwt.',
+    ridders: [
+      {n:'👓📖 De Wijze Ridder — Bekijk helder', v:'Wat is feitelijk gebeurd? Wat vrees ik alleen? Wat ontbreekt nog?'},
+      {n:'🛡️ De Beschermheer — Bescherm rust', v:'Moet dit nu? Kan ik input pauzeren? Heb ik water, eten of rust nodig?'},
+      {n:'🧭 De Strateeg — Opties', v:'Wat is het echte probleem? Wat is de kleinste werkbare oplossing? Minimaal twee opties, ook bewust niets doen.'},
+      {n:'⚔️ De Beslisser — Bestemming', v:'Wat, wanneer, waar, met wie.'},
+      {n:'🏮 De Wijze Koning — Terugkijken (bij Dag afsluiten)', v:'Heb ik gedaan wat ik besloot? Wat was feit en wat angst? Eén leerpunt.'}
+    ],
+    veiligheid: 'Bij acuut gevaar, medische nood of als je jezelf iets wilt aandoen: zoek direct professionele of spoedeisende hulp. RRT mag nooit noodzakelijke hulp vertragen.'
   },
 
   // Capture the moment (logboek) — soorten + snelle keuzes.
@@ -648,7 +827,8 @@ const CONFIG = {
     craving:  {label:'Craving', color:'#b6615a'},
     notitie:  {label:'Notitie', color:'#9aa0a8'},
     punt:     {label:'Punt',    color:'#7f9b7a'},
-    dagstructuur: {label:'Dagstructuur', color:'#bfae8e'}
+    dagstructuur: {label:'Dagstructuur', color:'#bfae8e'},
+    rrt:      {label:'RRT',     color:'#9b8db0'}
   },
   emotieKeuzes: ['Blij','Rustig','Dankbaar','Verdrietig','Boos','Angstig','Gespannen','Moe','Leeg'],
   cravingKeuzes: ['Licht','Middel','Sterk'],
@@ -742,7 +922,13 @@ function defaultState(){
     weekSelections: {},   // { maandagISO: [10 essential-id's] } — vast per week
     log: {},              // { dateISO: [ {id,time,kind,text,reason,ref} ] } — Capture the moment
     trash: [],            // laatste 3 verwijderde items (herstelknop)
-    schema: 14
+    // v1.5
+    routines: { ochtend:[], middag:[], avond:[] }, // [{id,titel,optioneel}]
+    routineChecked: {},   // { dateISO: { routineId: true | 'no' } }
+    brieven: null,        // { list:[{nr,tekst}], start, startDate }
+    cr1Teksten: [],       // tekst van de dag
+    blueprints: [],       // [{id,name,items:[...]}]
+    schema: 15
   };
 }
 function loadState(){
@@ -802,7 +988,36 @@ function migrateState(){
   });
   S.log = S.log || {};
   S.trash = Array.isArray(S.trash) ? S.trash : [];
-  S.schema = 14;
+  // v1.5: geen tellers meer. Oude 0/2-teller: 2 = gedaan, anders leeg.
+  (S.essentialPool||[]).forEach(p=>{ delete p.twice; });
+  Object.keys(S.essentialsChecked||{}).forEach(date=>{
+    const c = S.essentialsChecked[date];
+    Object.keys(c).forEach(k=>{
+      const v = c[k];
+      if(typeof v==='number'){ if(v>=2) c[k]=true; else delete c[k]; }
+      else if(v===false || v==null) delete c[k];
+    });
+  });
+  // v1.5: Essentials-spoor in de kalender (vaste dagdingen)
+  Object.values(S.days||{}).forEach(d=>(d.items||[]).forEach(it=>{
+    if(it.ess===undefined) it.ess = guessEss(it.title, it.isSleep);
+    if(it.skipped===undefined) it.skipped = false;
+  }));
+  (S.recurringTemplates||[]).forEach(t=>{ if(t.data && t.data.ess===undefined) t.data.ess = guessEss(t.data.title, t.data.isSleep); });
+  S.routines = S.routines || { ochtend:[], middag:[], avond:[] };
+  ['ochtend','middag','avond'].forEach(k=>{ if(!Array.isArray(S.routines[k])) S.routines[k]=[]; });
+  S.routineChecked = S.routineChecked || {};
+  S.cr1Teksten = Array.isArray(S.cr1Teksten) ? S.cr1Teksten : [];
+  S.blueprints = Array.isArray(S.blueprints) ? S.blueprints : [];
+  if(S.brieven===undefined) S.brieven = null;
+  Object.keys(S).forEach(k=>{ if(k.charAt(0)==='_') delete S[k]; });
+  Object.values(S.days||{}).forEach(d=>(d.items||[]).forEach(it=>{ delete it._new; }));
+  S.schema = 15;
+}
+function guessEss(title, isSleep){
+  if(isSleep) return true;
+  const t = (title||'').toLowerCase();
+  return CONFIG.essTitleWords.some(w=>t.split(/[^a-zà-ÿ]+/).includes(w));
 }
 function weekKey(iso){ return addDays(iso, -mondayIndex(fromISO(iso).getDay())); }
 function saveState(){ localStorage.setItem(CONFIG.storageKey, JSON.stringify(STATE)); }
@@ -827,8 +1042,9 @@ function buildDayObject(dateISO){
     const prevISO = addDays(dateISO, -back);
     const prev = STATE.days[prevISO];
     if(prev){
-      prev.items.filter(it=>it.type==='flex' && !it.done && !it.recurringTemplateId).forEach(it=>{
+      prev.items.filter(it=>it.type==='flex' && !it.done && !it.skipped && !it.recurringTemplateId).forEach(it=>{
         const clone = Object.assign({}, it, { id: uid('item'), carriedOver:true, order: day.items.length });
+        delete clone._new;
         delete clone._expanded; delete clone._motifEditing;
         day.items.push(clone);
       });
@@ -840,7 +1056,7 @@ function buildDayObject(dateISO){
     const days = t.repeatDays || [];
     if(days.length && !days.includes(weekdayIdx)) return;
     day.items.push(Object.assign({}, t.data, {
-      id: uid('item'), done:false, carriedOver:false, order: day.items.length,
+      id: uid('item'), done:false, skipped:false, carriedOver:false, order: day.items.length,
       recurringTemplateId:t.templateId, recurring:true
     }));
   });
@@ -903,12 +1119,14 @@ function newItem(type){
     resultPlanned:'', resultActual:'',
     allDay:false,
     isSleep:false, windDown:60,
+    ess:false, skipped:false,
     order:0
   };
 }
 /* "Dag"-items (hele dag) staan bovenaan; daarna items met een tijd
    chronologisch; items zonder tijd achteraan op hun ▲▼-volgorde. */
 function sortKey(it){
+  if(it._new) return -1e9;
   if(it.allDay) return -1e7 + (it.order||0);
   if(it.time){ return timeToMinutes(it.time) + (it.order||0)/1e6; }
   return 1e7 + (it.order||0);
@@ -929,7 +1147,7 @@ function syncTemplate(it){
   t.data = Object.assign({}, t.data, {
     type:it.type, title:it.title, why:it.why, tag:it.tag, icon:it.icon,
     time:it.time, location:it.location, message:it.message, duration:it.duration,
-    required:it.required, isSleep:it.isSleep, windDown:it.windDown, allDay:!!it.allDay
+    required:it.required, isSleep:it.isSleep, windDown:it.windDown, allDay:!!it.allDay, ess:!!it.ess
   });
 }
 
@@ -939,7 +1157,7 @@ function syncTemplate(it){
    geplande tijd loopt net achter; red = ruim voorbij de drempel. */
 function computeStatus(day, dateISO){
   if(day.items.length===0) return 'neutral';
-  const required = day.items.filter(it=>it.required);
+  const required = day.items.filter(it=>it.required && !it.skipped);
   const requiredDone = required.length===0 || required.every(it=>it.done);
   const minDoelMet = day.closing.minDoelMet || !day.framing.minDoel;
   if(requiredDone && minDoelMet) return 'green';
@@ -959,6 +1177,17 @@ const STATUS_COLOR = { neutral:'var(--neutral)', green:'var(--good)', orange:'va
 /* =====================================================================
    RENDER — LIVE
    ===================================================================== */
+/* v1.5: Live is écht live. Het grote blok toont het item dat NU loopt
+   (volgens tijd). Loopt er niets: "Vrij moment" + wat er straks komt.
+   Nooit terugvallen op het eerste onafgevinkte item van vandaag. */
+function itemEnd(it, list){
+  const st = timeToMinutes(it.time);
+  if(it.duration) return st + it.duration;
+  const nxt = list.find(x=>x.time && timeToMinutes(x.time) > st);
+  return nxt ? timeToMinutes(nxt.time) : st + 30;
+}
+function handled(it){ return it.done || it.skipped; }
+let doneListOpen = false;
 function renderLive(){
   const day = peekDay(currentDate);
   const status = computeStatus(day, currentDate);
@@ -968,73 +1197,88 @@ function renderLive(){
   renderBackupReminder();
   renderSleepBanner(day);
   renderIntentBox(day);
+  renderBriefBtn();
   renderCtm();
 
-  const allDay = orderedItems(day).filter(it=>it.allDay);
-  $('#allDayLive').innerHTML = allDay.length
-    ? `<div class="allDayRow">${allDay.map(it=>`<span class="allDayChip ${it.done?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
+  const all = orderedItems(day);
+  const allDay = all.filter(it=>it.allDay);
+  const untimed = all.filter(it=>!it.allDay && !it.time && !handled(it));
+  const chips = allDay.concat(untimed);
+  $('#allDayLive').innerHTML = chips.length
+    ? `<div class="allDayRow">${chips.map(it=>`<span class="allDayChip ${handled(it)?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
 
-  const items = orderedItems(day).filter(isMoment);
-  const notDone = items.filter(it=>!it.done);
+  const timed = all.filter(it=>!it.allDay && it.time).sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time));
+  const finished = all.filter(it=>!it.allDay && handled(it));
+  renderDoneList(finished);
 
-  if(items.length===0 && allDay.length){
-    $('#nowPrev').innerHTML=''; $('#nowNext').innerHTML='';
-    $('#nowCurrentBox').innerHTML = `<div class="allDayMsg" style="text-align:center;padding:14px;color:var(--muted);font-size:12px">Geen momenten met een tijd vandaag.</div>`;
-    renderReflect(); return;
-  }
-  if(items.length===0){
-    $('#nowPrev').innerHTML=''; $('#nowNext').innerHTML='';
-    $('#nowCurrentBox').innerHTML = `<div class="cur-eyebrow">Nog niets gebouwd</div><div class="cur-title">Ga naar Bouwen</div><div class="cur-why">Voeg een paar onderdelen toe voor vandaag — zo klein als je wilt.</div>`;
-    renderReflect(); return;
-  }
-  if(notDone.length===0){
-    $('#nowPrev').innerHTML = items[items.length-2] ? sideLineHTML(items[items.length-2]) : '';
-    $('#nowNext').innerHTML = '';
-    $('#nowCurrentBox').innerHTML = `<div class="allDoneMsg">Alles afgevinkt voor vandaag.<br>Kijk eventueel nog naar <b>Kalender</b> om af te sluiten.</div>`;
+  $('#nowPrev').classList.remove('hidden'); $('#nowNext').classList.remove('hidden');
+  if(timed.length===0 && !untimed.length){
+    $('#nowPrev').classList.add('hidden'); $('#nowNext').classList.add('hidden');
+    $('#nowCurrentBox').innerHTML = allDay.length
+      ? `<div style="text-align:center;padding:14px;color:var(--muted);font-size:12px">Geen momenten met een tijd vandaag.</div>`
+      : `<div class="cur-eyebrow">Nog niets gebouwd</div><div class="cur-title">Ga naar Bouwen</div><div class="cur-why">Voeg een paar onderdelen toe voor vandaag — zo klein als je wilt.</div>`;
     renderReflect(); return;
   }
 
-  // klok-gestuurd: een getimed item dat nu "loopt" heeft voorrang, anders
-  // gewoon het eerstvolgende open item in de eigen (chronologische) volgorde.
+  const isToday = currentDate===todayISO();
   const now = nowMinutes();
-  let current = notDone.find(it=>it.time && timeToMinutes(it.time)<=now && (!it.duration || now < timeToMinutes(it.time)+it.duration) && currentDate===todayISO());
-  if(!current) current = notDone[0];
+  let current=null, prev=null, next=null;
+  if(isToday){
+    // wat loopt er nu (laatst begonnen item dat nog niet voorbij is)
+    const running = timed.filter(it=>timeToMinutes(it.time)<=now && now < itemEnd(it, timed));
+    current = running.filter(it=>!handled(it)).pop() || null;
+    const past = timed.filter(it=>timeToMinutes(it.time)<=now && it!==current);
+    prev = past.length ? past[past.length-1] : null;
+    next = timed.find(it=>timeToMinutes(it.time)>now && !handled(it)) || null;
+  } else {
+    // andere dag: rustig overzicht vanaf het eerste open item
+    current = timed.find(it=>!handled(it)) || null;
+    const i = current ? timed.indexOf(current) : -1;
+    prev = i>0 ? timed[i-1] : null;
+    next = current ? (timed.slice(i+1).find(it=>!handled(it))||null) : null;
+  }
 
-  const idx = items.indexOf(current);
-  const prev = idx>0 ? items[idx-1] : null;
-  const nextIdx = notDone.indexOf(current);
-  const next = notDone[nextIdx+1] || null;
-
-  $('#nowPrev').innerHTML = prev ? sideLineHTML(prev) : '<span style="opacity:.4">— start van de dag —</span>';
-  $('#nowNext').innerHTML = next ? sideLineHTML(next) + (next.message?`<span class="nextMsg">${esc(next.message)}</span>`:'') : '<span style="opacity:.4">— laatste voor nu —</span>';
+  setSide('nowPrev', prev?'Hiervoor':'Start van de dag', prev, prev && !handled(prev) ? ' <span class="skipTag">open</span>' : '');
+  setSide('nowNext', next?'Hierna':'Niets meer gepland', next, next && next.message ? `<span class="nextMsg">${esc(next.message)}</span>` : '');
 
   let countdownHTML = '';
-  if(STATE.settings.countdownEnabled && currentDate===todayISO()){
-    const upcoming = items.filter(it=>it.time && !it.done && timeToMinutes(it.time)>=now);
-    if(upcoming.length){
-      upcoming.sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time));
-      const mins = timeToMinutes(upcoming[0].time) - now;
-      countdownHTML = `<div class="countdown">⏱ nog ${mins} min tot "${esc(upcoming[0].title||'vast moment')}" (${upcoming[0].time})</div>`;
-    }
+  if(STATE.settings.countdownEnabled && isToday && next){
+    const mins = timeToMinutes(next.time) - now;
+    countdownHTML = `<div class="countdown">⏱ nog ${mins>=60?fmtDuration(mins):mins+' min'} tot "${esc(next.title||'volgend moment')}" (${next.time})</div>`;
   }
-  const overdue = current.time && currentDate===todayISO() && timeToMinutes(current.time) < now;
-  // Woordje vooraf: alleen zolang het item nog niet begonnen is
-  const notStarted = !current.time || currentDate!==todayISO() || timeToMinutes(current.time) > now;
 
+  if(!current){
+    $('#nowCurrentBox').classList.add('freeBox');
+    const allHandled = timed.every(handled) && !untimed.length;
+    $('#nowCurrentBox').innerHTML = allHandled && (!isToday || !next)
+      ? `<div class="allDoneMsg">Alles gehad voor vandaag.<br>Sluit eventueel af in <b>Kalender</b>.</div>`
+      : `<div class="cur-eyebrow">Nu</div><div class="cur-title">Vrij moment</div>
+         ${next?`<div class="cur-why">Straks: ${esc(next.title||'(naamloos)')} · ${esc(next.time)}</div>`:''}
+         ${countdownHTML}`;
+    renderReflect(); return;
+  }
+  $('#nowCurrentBox').classList.remove('freeBox');
+  const notStarted = !isToday || timeToMinutes(current.time) > now;
   $('#nowCurrentBox').innerHTML = `
-    <div class="cur-eyebrow">${esc(TYPE_LABEL[current.type])}${overdue?' · loopt uit':''}</div>
+    <div class="cur-eyebrow">${isToday?'Nu · ':''}${esc(TYPE_LABEL[current.type])}</div>
     <div class="cur-title">${current.icon?esc(current.icon)+' ':''}${esc(current.title || '(naamloos)')}</div>
     ${current.why?`<div class="cur-why">${esc(current.why)}</div>`:''}
     ${(current.message && notStarted)?`<div class="cur-msg">${esc(current.message)}</div>`:''}
     <div class="cur-meta">
-      ${current.time?`<span class="timeBadge">${esc(current.time)}${current.location?' · '+esc(current.location):''}</span>`:''}
+      <span class="timeBadge">${esc(current.time)}${current.location?' · '+esc(current.location):''}</span>
       ${current.duration?`<span class="durBadge">${fmtDuration(current.duration)}</span>`:''}
       ${tagBadgeHTML(current.tag)}
     </div>
-    <button class="cur-done" data-donenow="${current.id}">Klaar — volgende</button>
+    <div><button class="cur-done" data-donenow="${current.id}">Klaar</button><button class="skipBtn" data-skipnow="${current.id}">Niet gedaan</button></div>
     ${countdownHTML}
   `;
   renderReflect();
+}
+function renderDoneList(finished){
+  const box = $('#doneListBox'); if(!box) return;
+  if(!finished.length){ box.innerHTML=''; return; }
+  box.innerHTML = `<div class="doneList"><div class="doneHead" id="doneListToggle"><span>Afgerond (${finished.length})</span><span>${doneListOpen?'▴':'▾'}</span></div>
+    ${doneListOpen?finished.map(it=>`<div class="doneRow ${it.skipped?'no':''}"><span class="t">${esc(it.time||'')}</span><span>${esc(it.title||'(naamloos)')}${it.skipped?'<span class="skipTag">niet gedaan</span>':''}</span></div>`).join(''):''}</div>`;
 }
 function renderIntentBox(day){
   const f = day.framing || {};
@@ -1049,6 +1293,11 @@ function renderIntentBox(day){
 }
 let liveDagdoelOpen = false;
 function sideLineHTML(it){ return `<b>${it.icon?esc(it.icon)+' ':''}${esc(it.title || '(naamloos)')}</b>${it.time?' · '+esc(it.time):''}`; }
+function setSide(id, label, it, extra){
+  const el = $('#'+id);
+  el.style.borderLeftColor = it ? colorHex(tagInfo(it.tag).color) : 'var(--line)';
+  el.innerHTML = `<span class="sideLbl">${label}</span>` + (it ? sideLineHTML(it) + (extra||'') : '<span style="opacity:.5">—</span>');
+}
 function tagBadgeHTML(tagId){
   const t = tagInfo(tagId); const label = tagChipLabel(tagId);
   return `<span class="durBadge"><span class="tagDot" style="background:${colorHex(t.color)}"></span>${label}</span>`;
@@ -1117,6 +1366,10 @@ function renderFraming(){
     </div>
   `;
 }
+function renderBuilderExtras(){
+  $('#updateRow').innerHTML = `<span>v${CONFIG.version}${navigator.onLine===false?' · offline':''}</span><a id="btnUpdate">↻ Nieuwste versie ophalen</a>`;
+  $('#bpRow').innerHTML = `<button id="btnBpSave">Bewaar als blueprint</button><button id="btnBpLoad">Blueprint laden${STATE.blueprints.length?' ('+STATE.blueprints.length+')':''}</button>`;
+}
 function renderAddMenu(){
   $('#addMenuPopup').innerHTML = `
     <button data-add="flex">Flexibel moment</button>
@@ -1178,7 +1431,7 @@ function itemCardHTML(it, untimedIdx, untimedTotal){
   const icons = it._iconsAll ? CONFIG.icons : topIcons(it.icon);
 
   return `
-  <div class="item ${it.done?'isdone':''} ${it.carriedOver?'carried':''} ${viewCls} ${locked}" data-id="${it.id}" style="border-left:3px solid ${colorHex(t.color)}">
+  <div class="item ${it.done?'isdone':''} ${it.skipped?'isskip':''} ${it.carriedOver?'carried':''} ${viewCls} ${locked}" data-id="${it.id}" style="border-left:3px solid ${colorHex(t.color)}">
     <div class="winCtrls">
       <button class="winBtn" data-win="min" title="${view==='min'?'Terug naar normaal':'Minimaliseren'}">${SVG_MIN}</button>
       <button class="winBtn" data-win="max" title="${view==='max'?'Terug naar normaal':'Alles openen'}">${SVG_MAX}</button>
@@ -1193,6 +1446,7 @@ function itemCardHTML(it, untimedIdx, untimedTotal){
         <div class="titleRow">
           <span class="iconGlyph">${esc(it.icon||'')}</span>
           <input type="text" class="titleInput" data-field="title" value="${esc(it.title)}" placeholder="Naam" ${ro}>
+          ${it.skipped?'<span class="skipTag">niet gedaan</span>':''}
           ${view==='min' ? `<span class="minTime">${it.allDay?'Dag':(it.time||'')}</span>` : ''}
         </div>
         ${motifHTML}
@@ -1205,6 +1459,7 @@ function itemCardHTML(it, untimedIdx, untimedTotal){
       ${moment?`<input type="time" class="timeBadge" data-field="time" value="${it.time||''}" style="border:1px solid var(--line);background:var(--panel)" ${dis}>`:''}
       ${showDuration?`<span class="durBadge">${fmtDuration(it.duration)}</span>`:''}
       ${showRequired?`<span class="reqChip ${it.required?'on':''}" data-toggle="required">verplicht</span>`:''}
+      <span class="essChip ${it.ess?'on':''}" data-toggle="ess" title="In het Essentials-spoor van de kalender (vaste dagdingen)">Essential</span>
       <span class="ctrlCluster">
         <button class="infBtn ${it.recurring?'on':''}" data-openrepeat title="Herhalen" ${dis}>∞</button>
         <button class="lockBtn ${it.locked?'on':''}" data-openlock title="Vergrendelen"><span class="dot"></span></button>
@@ -1310,15 +1565,49 @@ function proposedSelection(iso){
   return (STATE.essentialPool||[]).filter(p=>!p.archived).slice(0, CONFIG.pointsPerWeek).map(p=>p.id);
 }
 function essVal(iso, id){ const c = STATE.essentialsChecked[iso]||{}; return c[id]; }
-function essDone(iso, id){
-  const v = essVal(iso,id);
-  if(poolItem(id).twice) return (typeof v==='number' ? v : (v?2:0)) >= 2;
-  return !!v;
-}
+function essDone(iso, id){ return essVal(iso,id)===true; }
 function essScore(iso){ const sel = proposedSelection(iso); return { done: sel.filter(id=>essDone(iso,id)).length, total: sel.length }; }
+/* tri-state: leeg -> gedaan -> niet gedaan -> leeg */
+function nextTri(v){ return v===true ? 'no' : (v==='no' ? undefined : true); }
+function triCls(v){ return v===true ? 'done' : (v==='no' ? 'no' : ''); }
+/* Routine */
+function allRoutines(){ const R=STATE.routines||{}; return ['ochtend','middag','avond'].reduce((a,k)=>a.concat((R[k]||[]).map(r=>Object.assign({dagdeel:k},r))),[]); }
+function rtVal(iso,id){ const c=STATE.routineChecked[iso]||{}; return c[id]; }
+function rtScore(iso){
+  const all = allRoutines(); const req = all.filter(r=>!r.optioneel);
+  const done = all.filter(r=>rtVal(iso,r.id)===true).length;
+  return { done, total: req.length, all: all.length };
+}
+/* Puntenbalk: habits vullen de onderste helft (groen), routine de bovenste (blauw). */
+function barFracs(iso){
+  const h = essScore(iso), r = rtScore(iso);
+  const hf = h.total ? Math.min(1, h.done/h.total) : 0;
+  const rf = r.total ? Math.min(1, r.done/r.total) : (r.done?1:0);
+  return { hf, rf, h, r };
+}
 
-/* ---------- Kalender: twee kalenders, drie weergaven ---------- */
+/* ---------- Kalender: twee sporen (Agenda + Essentials), drie weergaven ----------
+   Essentials = vaste dagdingen (ontbijt, lunch, diner, slaap…), per item aan
+   te zetten met de chip "Essential" in Bouwen. "Naast elkaar" = één gedeelde
+   tijdlijn waarin beide sporen door elkaar op tijd staan. */
 const CAL_VIEWS = [['agenda','Agenda'],['ess','Essentials'],['compact','Naast elkaar']];
+function timelineHTML(list, showTrack){
+  return `<div class="timelineWrap" id="dayTimeline">${list.map((it,i)=>{
+    const movable = it.type==='flex' && !it.locked;
+    return `
+    <div class="tlRow ${it.ess?'isEss':''}" ${it.time?`data-time="${it.time}"`:''} data-id="${it.id}">
+      ${movable?'<span class="tlHandle" title="Slepen om tijd te wijzigen">⋮⋮</span>':'<span style="width:11px"></span>'}
+      <span class="tlNum">${i+1}</span>
+      <input type="checkbox" class="tlCheck" data-field="done" data-tlid="${it.id}" ${it.done?'checked':''}>
+      <div class="tlBody">
+        <div class="tlTitle ${handled(it)?'isdone':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}${showTrack&&it.ess?'<span class="trackTag">ess</span>':''}${it.skipped?'<span class="skipTag">niet gedaan</span>':''}</div>
+        <div class="tlMeta">
+          ${movable ? `<input type="time" class="tlTimeInput" data-tltime="${it.id}" value="${it.time||''}">` : (it.time?esc(it.time):'')}
+          ${it.duration?' · '+fmtDuration(it.duration):''}${it.location?' · '+esc(it.location):''}
+        </div>
+      </div>
+    </div>`; }).join('')}</div>`;
+}
 function renderCalendar(){
   calendarAnchor = currentDate;
   renderWeekStrip();
@@ -1336,51 +1625,25 @@ function renderCalendar(){
   const items = orderedItems(day);
   const allDay = items.filter(it=>it.allDay);
   const moments = items.filter(isMoment);
-  const sel = proposedSelection(currentDate);
-  const allDayHTML = allDay.length ? `<div class="allDayCal">${allDay.map(it=>`<span class="allDayChip ${it.done?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
+  const agendaM = moments.filter(it=>!it.ess), essM = moments.filter(it=>it.ess);
+  const chipRow = list => list.length ? `<div class="allDayCal">${list.map(it=>`<span class="allDayChip ${handled(it)?'done':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</span>`).join('')}</div>` : '';
+  const empty = msg => `<div style="font-size:11px;color:var(--muted)">${msg}</div>`;
 
-  const agendaFull = () => allDayHTML + (moments.length
-    ? `<div class="timelineWrap" id="dayTimeline">${moments.map((it,i)=>{
-        const movable = it.type==='flex' && !it.locked;
-        return `
-        <div class="tlRow" ${it.time?`data-time="${it.time}"`:''} data-id="${it.id}">
-          ${movable?'<span class="tlHandle" title="Slepen om tijd te wijzigen">⋮⋮</span>':'<span style="width:11px"></span>'}
-          <span class="tlNum">${i+1}</span>
-          <input type="checkbox" class="tlCheck" data-field="done" data-tlid="${it.id}" ${it.done?'checked':''}>
-          <div class="tlBody">
-            <div class="tlTitle ${it.done?'isdone':''}">${it.icon?esc(it.icon)+' ':''}${esc(it.title||'(naamloos)')}</div>
-            <div class="tlMeta">
-              ${movable ? `<input type="time" class="tlTimeInput" data-tltime="${it.id}" value="${it.time||''}">` : (it.time?esc(it.time):'')}
-              ${it.duration?' · '+fmtDuration(it.duration):''}${it.location?' · '+esc(it.location):''}
-            </div>
-          </div>
-        </div>`; }).join('')}</div>`
-    : `<div style="font-size:11px;color:var(--muted)">${allDay.length?'Geen momenten met een tijd.':'Nog niets gebouwd voor deze dag. Ga naar Bouwen.'}</div>`);
+  const strip = (kind, list) => `<div class="calStrip" data-calview="${kind}" title="${kind==='ess'?'Essentials':'Agenda'} openen">${list.map(it=>`<span class="sdot ${it.done?'on':''}"></span>`).join('')}<span class="stripLbl">${kind==='ess'?'Essentials':'Agenda'}</span></div>`;
 
-  const essFull = () => sel.length
-    ? sel.map(id=>{ const p=poolItem(id); const d=essDone(currentDate,id);
-        const cnt = p.twice ? ` <small style="color:var(--faint)">${Math.min(2, typeof essVal(currentDate,id)==='number'?essVal(currentDate,id):(essVal(currentDate,id)?2:0))}/2</small>` : '';
-        return `<div class="essRow ${d?'done':''}"><span class="mk ${d?'on':''}">${d?'✓':''}</span><span class="n">${esc(p.name)}${cnt}</span></div>`; }).join('')
-    : `<div style="font-size:11px;color:var(--muted)">Nog geen Essentials gekozen (zie Punten).</div>`;
-
-  const strip = (kind) => {
-    if(kind==='ess') return `<div class="calStrip" data-calview="ess" title="Essentials openen">${sel.map(id=>`<span class="sdot ${essDone(currentDate,id)?'on':''}"></span>`).join('')}<span class="stripLbl">Essentials</span></div>`;
-    return `<div class="calStrip" data-calview="agenda" title="Agenda openen">${moments.map(it=>`<span class="sdot ${it.done?'on':''}"></span>`).join('')}<span class="stripLbl">Agenda</span></div>`;
-  };
-
-  let html;
+  let html, tl=null;
   if(v==='ess'){
-    html = `<div class="calGrid v-ess">${strip('agenda')}<div><div class="calColHead">Essentials</div>${essFull()}</div></div>`;
+    tl = essM;
+    html = `<div class="calGrid v-ess">${strip('agenda', agendaM)}<div><div class="calColHead">Essentials</div>${chipRow(allDay.filter(i=>i.ess))}${essM.length?timelineHTML(essM,false):empty('Nog geen Essentials vandaag. Zet in Bouwen bij een item de chip "Essential" aan.')}</div></div>`;
   } else if(v==='compact'){
-    const ag = allDay.map(it=>`<div class="compactRow ${it.done?'done':''}"><span class="ct">Dag</span>${esc(it.title||'(naamloos)')}</div>`).join('') +
-               moments.map(it=>`<div class="compactRow ${it.done?'done':''}"><span class="ct">${esc(it.time||'')}</span>${esc(it.title||'(naamloos)')}</div>`).join('');
-    const es = sel.map(id=>`<div class="compactRow ${essDone(currentDate,id)?'done':''}">${essDone(currentDate,id)?'✓ ':''}${esc(poolItem(id).name)}</div>`).join('');
-    html = `<div class="calGrid v-compact"><div><div class="calColHead">Agenda</div>${ag||'<div class="compactRow" style="color:var(--faint)">—</div>'}</div><div><div class="calColHead">Essentials</div>${es||'<div class="compactRow" style="color:var(--faint)">—</div>'}</div></div>`;
+    tl = moments;
+    html = `${chipRow(allDay)}${moments.length?timelineHTML(moments,true):empty('Nog niets gebouwd voor deze dag. Ga naar Bouwen.')}`;
   } else {
-    html = `<div class="calGrid v-agenda"><div>${agendaFull()}</div>${strip('ess')}</div>`;
+    tl = agendaM;
+    html = `<div class="calGrid v-agenda"><div>${chipRow(allDay.filter(i=>!i.ess))}${agendaM.length?timelineHTML(agendaM,false):empty(moments.length?'Alles staat in Essentials.':'Nog niets gebouwd voor deze dag. Ga naar Bouwen.')}</div>${strip('ess', essM)}</div>`;
   }
   $('#calTwoBox').innerHTML = html;
-  if(v==='agenda' && moments.length) positionNowLine(moments);
+  if(tl && tl.length) positionNowLine(tl);
   renderClosing();
 }
 
@@ -1419,24 +1682,31 @@ function positionNowLine(items){
 function renderClosing(){
   const day = peekDay(currentDate);
   const werkblokken = day.items.filter(it=>it.type==='werkblok');
+  const usedRrt = (STATE.log[currentDate]||[]).some(e=>e.kind==='rrt');
+  const lbl = 'display:block;font-size:10px;color:var(--muted);margin-top:8px';
+  const inp = 'width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px';
   $('#closingBox').innerHTML = `
     ${werkblokken.length ? werkblokken.map(w=>`
       <div style="margin-bottom:8px">
         <div style="font-size:11px;font-weight:700">${esc(w.title||'Werkmoment')}</div>
-        <textarea data-closeresult="${w.id}" placeholder="Werkelijk resultaat…" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px;min-height:40px">${esc(w.resultActual)}</textarea>
-      </div>`).join('') : '<div style="font-size:11px;color:var(--muted)">Geen werkmomenten vandaag.</div>'}
+        <textarea data-closeresult="${w.id}" placeholder="Werkelijk resultaat…" style="${inp};min-height:40px">${esc(w.resultActual)}</textarea>
+      </div>`).join('') : ''}
 
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:6px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:2px">
       <input type="checkbox" id="minDoelChk" ${day.closing.minDoelMet?'checked':''}> Minimum gehaald
     </label>
 
-    <label style="display:block;font-size:10px;color:var(--muted);margin-top:8px">Hoe was de dag? (1–5)</label>
+    <div class="sectionLabel" style="margin-top:12px">Reflectie</div>
+    <label style="${lbl};margin-top:0">Hoe was de dag? (1–5)</label>
     <div class="ratingRow" id="ratingRow">${[1,2,3,4,5].map(n=>`<button data-rating="${n}" class="${day.closing.dayRating===n?'on':''}">${n}</button>`).join('')}</div>
 
-    <label style="display:block;font-size:10px;color:var(--muted);margin-top:8px">Kreeg ik de dag die ik wilde? (1 regel)</label>
-    <input type="text" id="oneLinerInput" value="${esc(day.closing.oneLiner)}" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px">
+    <label style="${lbl}">Kreeg ik de dag die ik wilde? <span style="color:var(--faint)">(1 regel)</span></label>
+    <input type="text" id="oneLinerInput" value="${esc(day.closing.oneLiner)}" style="${inp}">
 
-    <div class="closingRow">
+    ${usedRrt?`<label style="${lbl}">🏮 Leerpunt van vandaag (RRT) <span style="color:var(--faint)">— wat was feit, wat angst?</span></label>
+    <input type="text" id="leerpuntInput" class="optHint" placeholder="(optioneel)" value="${esc(day.closing.leerpunt||'')}" style="${inp}">`:''}
+
+    <div class="closingRow" style="margin-top:10px">
       <button id="btnCloseDay" style="border:1px solid var(--good);color:var(--good);background:transparent;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer">
         ${day.closing.closed?'Dag afgesloten ✓':'Dag afsluiten'}
       </button>
@@ -1447,61 +1717,78 @@ function renderClosing(){
 /* =====================================================================
    RENDER — PUNTEN
    ===================================================================== */
-/* Alleen-bekijken puntenscore van de geopende dag, getoond in Kalender. */
+/* Alleen-bekijken score van de geopende dag, getoond in Kalender. */
 function renderCalendarPoints(){
   const el = $('#calPoints');
   if(!el) return;
   if(!STATE.settings.pointsEnabled){ el.innerHTML = ''; return; }
-  const sc = essScore(currentDate);
-  el.innerHTML = `<span class="durBadge">Punten ${sc.done}/${sc.total}</span>`;
+  const f = barFracs(currentDate);
+  el.innerHTML = `<span class="durBadge" data-goview="points" style="cursor:pointer"><span class="tagDot" style="background:var(--good)"></span>${f.h.done}/${f.h.total}${f.r.all?` <span class="tagDot" style="background:var(--blue);margin-left:4px"></span>${f.r.done}/${f.r.total}`:''}</span>`;
 }
 
-/* Punten-tab: 10 Essentials per week, vast voor die week. */
+/* Tab 4 — Habits + Routine: twee sporen, zelfde gedrag (tik-cyclus),
+   apart of naast elkaar. Habits: 10 per week, vastgezet. Routine: per
+   dagdeel, gewoon bewerkbaar. Puntenbalk: groen onder, blauw erboven. */
+const HR_VIEWS = [['habits','Habits'],['routine','Routine'],['beide','Naast elkaar']];
 let pickDraft = null; // tijdelijke keuze tijdens het kiezen van de week
 function renderPoints(){
   if(!STATE.settings.pointsEnabled){
-    $('#pointsCard').innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:30px 10px">Punten-tab staat uit. Zet hem aan via instellingen (⚙).</div>`;
+    $('#pointsCard').innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:30px 10px">Habits-tab staat uit. Zet hem aan via instellingen (⚙).</div>`;
     return;
   }
   const wk = weekKey(currentDate);
   const locked = STATE.weekSelections[wk];
   const N = CONFIG.pointsPerWeek;
-  const head = `<div class="pointsHead"><div class="sectionLabel" style="margin:0">Punten — geen strafpunten</div><button class="editLink" id="btnEditPool">✎ bewerk</button></div>`;
+  const v = STATE.settings.hrView || 'beide';
+  const f = barFracs(currentDate);
 
+  // bovenblok: verticale balk + samenvatting + 7 dagen
+  let week = '';
+  for(let i=6;i>=0;i--){
+    const iso = addDays(currentDate, -i); const g = barFracs(iso);
+    week += `<div class="wsCol"><div class="wsBar"><i class="g" style="height:${g.hf*50}%"></i><i class="b" style="height:${g.rf*50}%"></i></div><span class="wsLbl">${fromISO(iso).getDate()}</span></div>`;
+  }
+  const top = `<div class="hrTop">
+      <div class="vbar"><i class="g" style="height:${f.hf*50}%"></i><i class="b" style="height:${f.rf*50}%"></i><span class="mid"></span></div>
+      <div class="hrSum"><div class="sectionLabel" style="margin:0 0 4px">Vandaag</div>
+        <span class="lgDot" style="background:var(--good)"></span> Habits <b>${f.h.done}/${f.h.total}</b><br>
+        <span class="lgDot" style="background:var(--blue)"></span> Routine <b>${f.r.done}/${f.r.total}</b>
+      </div>
+      <div class="weekStack">${week}</div>
+    </div>
+    <div class="hrLegend"><span><i class="lgDot" style="background:var(--good)"></i>gedaan</span><span><i class="lgDot" style="background:var(--blue)"></i>routine gedaan</span><span><i class="lgDot" style="background:#c3c6cc"></i>niet gedaan</span><span><i class="lgDot" style="border:1.5px solid var(--faint)"></i>nog leeg</span><span style="margin-left:auto">geen strafpunten</span></div>`;
+
+  // habits-spoor
+  let habits;
   if(!locked){
     if(!pickDraft || pickDraft.wk!==wk) pickDraft = { wk, ids: proposedSelection(currentDate).slice() };
     const pool = (STATE.essentialPool||[]).filter(p=>!p.archived);
     const n = pickDraft.ids.length;
-    $('#pointsCard').innerHTML = head + `
-      <div class="pickInfo">Nieuwe week (vanaf ${esc(fmtDateShort(wk))}). Kies je ${N} Essentials — die staan daarna vast tot volgende week. <b>${n}/${N}</b> gekozen.</div>
+    habits = `<div class="pickInfo">Nieuwe week (vanaf ${esc(fmtDateShort(wk))}). Kies je ${N} habits — die staan daarna vast tot volgende week. <b>${n}/${N}</b></div>
       ${pool.map(p=>`<label class="pickRow"><input type="checkbox" data-pick="${p.id}" ${pickDraft.ids.includes(p.id)?'checked':''} ${(!pickDraft.ids.includes(p.id) && n>=N)?'disabled':''}> ${esc(p.name)}</label>`).join('')}
-      <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="primaryBtn" id="btnLockWeek" ${n===N?'':'disabled'}>Vastzetten voor deze week</button></div>
-    `;
-    return;
+      <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="primaryBtn" id="btnLockWeek" ${n===N?'':'disabled'}>Vastzetten</button></div>`;
+  } else {
+    habits = locked.map(id=>{ const val=essVal(currentDate,id);
+      return `<div class="triRow ${val==='no'?'isno':''}" data-trih="${id}"><span class="tri ${triCls(val)}"></span><span class="n">${esc(poolItem(id).name)}</span></div>`; }).join('');
   }
+  const habitsHead = `<div class="pointsHead"><div class="sectionLabel" style="margin:0">Habits ${helpBtn('habits')}</div><button class="editLink" id="btnEditPool">✎</button></div>${helpLine('habits')}`;
 
-  const sc = essScore(currentDate);
-  let weekHTML = '';
-  for(let i=6;i>=0;i--){
-    const iso = addDays(todayISO(), -i);
-    const s2 = essScore(iso);
-    const pct = s2.total ? Math.round(s2.done/s2.total*100) : 0;
-    weekHTML += `<div class="pointsWeekCol"><div class="pointsWeekBar"><i style="height:${pct}%"></i></div><div class="pointsWeekLbl">${fromISO(iso).getDate()}</div></div>`;
-  }
-  $('#pointsCard').innerHTML = head + `
-    <div style="font-size:11px;color:var(--muted)">${sc.done} / ${sc.total} vandaag</div>
-    <div class="meter">${locked.map((_,i)=>`<div class="meterBox ${i<sc.done?'on':''}"></div>`).join('')}</div>
-    ${locked.map(id=>{
-      const p = poolItem(id);
-      if(p.twice){
-        const raw = essVal(currentDate,id); const n = Math.min(2, typeof raw==='number'?raw:(raw?2:0));
-        return `<div class="essItem"><span class="essName">${esc(p.name)}</span><button class="essCount ${n>=2?'on':''}" data-esscount="${id}" title="Tik per bewust contact">${n}/2</button></div>`;
-      }
-      return `<label class="essItem"><input type="checkbox" data-ess="${id}" ${essDone(currentDate,id)?'checked':''}> <span class="essName">${esc(p.name)}</span></label>`;
-    }).join('')}
-    <div class="sectionLabel" style="margin-top:12px">Laatste 7 dagen</div>
-    <div class="pointsWeek">${weekHTML}</div>
-  `;
+  // routine-spoor
+  const R = STATE.routines;
+  const hasR = allRoutines().length>0;
+  const routine = hasR ? ['ochtend','middag','avond'].filter(k=>R[k].length).map(k=>`<div class="dagdeelHead">${k}</div>` + R[k].map(r=>{
+      const val = rtVal(currentDate, r.id);
+      return `<div class="triRow ${r.optioneel?'opt':''} ${val==='no'?'isno':''}" data-trir="${r.id}"><span class="tri blue ${triCls(val)}"></span><span class="n">${esc(r.titel)}${r.optioneel?' <small>(optioneel)</small>':''}</span></div>`;
+    }).join('')).join('')
+    : `<div style="font-size:11px;color:var(--muted);padding:6px 0">Nog geen routine. Voeg toe met ✎ of zet routines.json erin via Instellingen → Bestand toevoegen.</div>`;
+  const routineHead = `<div class="pointsHead"><div class="sectionLabel" style="margin:0">Routine ${helpBtn('routine')}</div><button class="editLink" id="btnEditRoutine">✎</button></div>${helpLine('routine')}`;
+
+  let body;
+  if(v==='habits') body = habitsHead + habits;
+  else if(v==='routine') body = routineHead + routine;
+  else body = `<div class="twoCol"><div>${habitsHead}${habits}</div><div>${routineHead}${routine}</div></div>`;
+
+  $('#pointsCard').innerHTML = top + `<div style="display:flex;margin:12px 0 6px"><span class="calViewSwitch" style="margin-left:0">${HR_VIEWS.map(([k,l])=>`<button data-hrview="${k}" class="${k===v?'on':''}">${l}</button>`).join('')}</span></div>` + body;
 }
 function renderPoolModal(){
   const wk = weekKey(currentDate);
@@ -1522,7 +1809,8 @@ function logPoint(iso, id, on){
 }
 function setEss(iso, id, value){
   STATE.essentialsChecked[iso] = STATE.essentialsChecked[iso] || {};
-  STATE.essentialsChecked[iso][id] = value;
+  if(value===undefined || value===false) delete STATE.essentialsChecked[iso][id];
+  else STATE.essentialsChecked[iso][id] = value;
   logPoint(iso, id, essDone(iso, id));
 }
 function nowHHMM(){ const d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); }
@@ -1591,9 +1879,9 @@ function renderLibrary(){
    ===================================================================== */
 function renderTerug(focus){
   let html='';
-  if(focus) html += `<div class="quote">Focus: ${esc(focus)}</div>`;
+  if(focus && focus!=='RRT') html += `<div class="quote">Focus: ${esc(focus)}</div>`;
 
-  html += `<details open><summary class="sectionLabel" style="cursor:pointer">Energiebronnen</summary>`;
+  html += `<details ${(!focus||focus==='Fysiek actief')?'open':''}><summary class="sectionLabel" style="cursor:pointer">Energiebronnen</summary>`;
   Object.keys(CONFIG.energyBronnen).forEach(cat=>{
     html += `<div class="energyCat"><div class="catTitle">${esc(cat)}</div>`;
     CONFIG.energyBronnen[cat].forEach(e=>{ html += `<div class="energyRow"><span>${esc(e.naam)}</span><span class="scorePip">${e.score}/10</span></div>`; });
@@ -1606,6 +1894,8 @@ function renderTerug(focus){
   CONFIG.deescalatie.ikZinnen.forEach(q=>{ html += `<div class="quote">${esc(q)}</div>`; });
   CONFIG.deescalatie.uitstel.forEach(q=>{ html += `<div class="quote">${esc(q)}</div>`; });
   html += `</details>`;
+
+  html += rrtHTML(focus==='RRT');
 
   html += `<details ${focus==='Feel-better toolkit'?'open':''}><summary class="sectionLabel" style="cursor:pointer;margin-top:10px">Feel-better toolkit</summary>
     <div class="chklist">${CONFIG.feelBetter.map(f=>`<div class="chkrow">· ${esc(f)}</div>`).join('')}</div></details>`;
@@ -1647,24 +1937,34 @@ function last7MoodDots(){
    RENDER — INSTELLINGEN (incl. Export/Import backup)
    ===================================================================== */
 function renderSettings(){
+  const bl = briefList(), today = briefForDate(todayISO());
+  const rc = allRoutines().length, tc = (STATE.cr1Teksten||[]).length;
   $('#settingsBody').innerHTML = `
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0">
-      <input type="checkbox" id="setPoints" ${STATE.settings.pointsEnabled?'checked':''}> Punten-tab tonen
+      <input type="checkbox" id="setPoints" ${STATE.settings.pointsEnabled?'checked':''}> Habits-tab tonen
     </label>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0">
-      <input type="checkbox" id="setCountdown" ${STATE.settings.countdownEnabled?'checked':''}> Countdown naar volgend getimed moment op Live
+      <input type="checkbox" id="setCountdown" ${STATE.settings.countdownEnabled?'checked':''}> Countdown naar volgend moment op Live
     </label>
+    <div style="border-top:1px dashed var(--line);margin-top:10px;padding-top:10px">
+      <div class="sectionLabel">Bestand toevoegen</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Een dag, je dagbrieven, je routine of CR.1-teksten. Je mag meerdere bestanden tegelijk kiezen. Een dag wordt <b>toegevoegd</b>, er wordt niets anders vervangen.</div>
+      <div class="detailActions"><button id="btnImportDay">Bestand toevoegen</button></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7">
+        Dagbrieven: ${bl.length?`${bl.length} · vandaag brief <b>${today?today.nr:'-'}</b> <button class="editLink" data-briefshift="-1">‹</button> <button class="editLink" data-briefshift="1">›</button>`:'nog geen'}<br>
+        Routine: ${rc?rc+' punten':'nog geen'} · CR.1-teksten: ${tc||'nog geen'}
+      </div>
+    </div>
     <div style="border-top:1px dashed var(--line);margin-top:10px;padding-top:10px">
       <div class="sectionLabel">Back-up</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Laatste back-up: ${STATE.lastBackup ? fmtDateShort(STATE.lastBackup) : 'nog nooit'}</div>
       <div class="detailActions">
-        <button id="btnExport">Exporteren (JSON)</button>
-        <button id="btnImport">Importeren (JSON)</button>
-        <button id="btnImportDay">Dag toevoegen</button>
+        <button id="btnExport">Exporteren (alles, alle dagen)</button>
+        <button id="btnImport">Back-up terugzetten</button>
       </div>
-      <div style="font-size:10px;color:var(--faint);margin-top:6px">"Dag toevoegen" voegt één dag uit een apart dagbestand toe aan je bestaande data — niets anders wordt aangepast.</div>
+      <div style="font-size:10px;color:var(--faint);margin-top:6px">Back-up terugzetten vervangt alles op dit toestel door de back-up.</div>
     </div>
-    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v1.4 · pilot · data blijft lokaal op dit toestel.</div>
+    <div style="font-size:10px;color:var(--faint);margin-top:10px">CR.4 Daybuilder v${CONFIG.version} · data blijft lokaal op dit toestel.</div>
   `;
 }
 
@@ -1678,7 +1978,8 @@ function renderAnker(){
       <button class="feelBtn" data-feel="moe">😮‍💨 Moe</button>
       <button class="feelBtn" data-feel="gespannen">😬 Gespannen</button>
       <button class="feelBtn" data-feel="vlak">😶 Vlak</button>
-      <button class="feelBtn" data-feel="anders">🤔 Anders</button>
+      <button class="feelBtn" data-feel="twijfel">🤔 Twijfel / druk</button>
+      <button class="feelBtn" data-feel="anders">· Anders</button>
     </div>`;
 }
 function routeAnker(feel){
@@ -1686,8 +1987,119 @@ function routeAnker(feel){
   let focus = 'Feel-better toolkit';
   if(feel==='moe') focus = 'Fysiek actief';
   if(feel==='gespannen') focus = 'De-escalatie';
+  if(feel==='twijfel') focus = 'RRT';
   renderTerug(focus);
   openOverlay('terugPanel');
+}
+
+/* =====================================================================
+   v1.5 — DAGBRIEF (Live)
+   Vaste volgorde: één brief per dag, schuift elke dag één door. Daaronder
+   de "tekst van de dag" uit CR.1 (willekeurig, maar vast voor die dag).
+   ===================================================================== */
+function briefList(){ const B=STATE.brieven; return B && Array.isArray(B.list) ? B.list.slice().sort((a,b)=>a.nr-b.nr) : []; }
+function briefForDate(iso){
+  const B = STATE.brieven, list = briefList(); if(!list.length) return null;
+  let si = list.findIndex(b=>b.nr===B.start); if(si<0) si = 0;
+  const n = list.length, off = daysBetween(iso, B.startDate||todayISO());
+  return list[((si+off)%n+n)%n];
+}
+function hashStr(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h+str.charCodeAt(i))|0; } return Math.abs(h); }
+function textForDate(iso){ const T=STATE.cr1Teksten||[]; return T.length ? T[hashStr('cr1'+iso)%T.length] : null; }
+const ORNAMENT = `<svg width="170" height="14" viewBox="0 0 170 14" aria-hidden="true"><path d="M6 7H60" stroke="currentColor" stroke-width=".8" stroke-linecap="round"/><path d="M110 7H164" stroke="currentColor" stroke-width=".8" stroke-linecap="round"/><path d="M64 7C70 1.5 76 1.5 85 7C94 12.5 100 12.5 106 7" fill="none" stroke="currentColor" stroke-width=".9"/><path d="M64 7C70 12.5 76 12.5 85 7C94 1.5 100 1.5 106 7" fill="none" stroke="currentColor" stroke-width=".9"/><path d="M85 4.2L87.8 7L85 9.8L82.2 7Z" fill="currentColor"/></svg>`;
+function renderBriefBtn(){
+  const box = $('#briefBtnBox'); if(!box) return;
+  if(!briefList().length && !(STATE.cr1Teksten||[]).length){ box.innerHTML=''; return; }
+  box.innerHTML = `<button class="briefBtn" id="btnBrief"><span class="env">✉️</span>Bericht aan mezelf</button>`;
+}
+function openBrief(){
+  const b = briefForDate(currentDate), t = textForDate(currentDate);
+  $('#briefBody').innerHTML = `
+    ${b?`<div class="briefNr">Brief ${b.nr}</div><div class="briefText">${esc(b.tekst)}</div>`:`<div style="font-size:11px;color:var(--muted);text-align:center">Nog geen dagbrieven. Zet ze erin via Instellingen → Bestand toevoegen.</div>`}
+    ${t?`<div class="ornament">${ORNAMENT}</div><div class="briefNr">Tekst van de dag</div><div class="dayText">${esc(t)}</div>`:''}`;
+  openOverlay('briefModal');
+}
+
+/* =====================================================================
+   v1.5 — RRT (Ridders van de Ronde Tafel), mini-versie
+   ===================================================================== */
+let rrtDraft = { veilig:'', feit:'', stap:'', dest:'', tijd:'' };
+function rrtHTML(open){
+  const C = CONFIG.rrt, d = rrtDraft;
+  return `<details ${open?'open':''}><summary class="sectionLabel" style="cursor:pointer;margin-top:10px">RRT — Ronde Tafel</summary>
+    <div style="font-size:12px;color:var(--ink);margin:4px 0 2px">${esc(C.intro)} ${helpBtn('rrt')}</div>${helpLine('rrt')}
+    ${C.stappen.map((st,i)=>`<div class="rrtStep"><div class="q">${i+1}. ${st.icon} ${esc(st.q)}</div><input type="text" class="optHint" data-rrt="${st.k}" value="${esc(d[st.k])}" placeholder="${esc(st.ph||'(optioneel)')}"></div>`).join('')}
+    <div class="rrtStep"><div class="q">4. ⚔️ Bestemming</div>
+      <div class="rrtDest">${C.bestemmingen.map(b=>`<button data-rrtdest="${esc(b)}" class="${d.dest===b?'on':''}">${esc(b)}</button>`).join('')}</div>
+      ${d.dest==='Inplannen'?`<div style="margin-top:6px;font-size:11px;color:var(--muted)">Wanneer? <input type="time" id="rrtTime" value="${esc(d.tijd)}" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:12px"> <span style="color:var(--faint)">→ komt als Flexibel moment in je dag</span></div>`:''}
+      ${d.dest==='Hulp inschakelen'?`<div class="quote" style="margin-top:6px">${esc(C.hulp)}</div>`:''}
+    </div>
+    <div class="quote">${esc(C.zin)}</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="primaryBtn" id="btnRrtSave">Vastleggen</button></div>
+    <details style="margin-top:8px"><summary style="font-size:10px;color:var(--muted);cursor:pointer">Volledige ronde (5 ridders)</summary>
+      ${C.ridders.map(r=>`<div class="ridder"><b>${esc(r.n)}</b><span>${esc(r.v)}</span></div>`).join('')}
+    </details>
+    <div class="rrtNote">${esc(C.veiligheid)}</div>
+  </details>`;
+}
+function saveRrt(){
+  const d = rrtDraft;
+  if(!d.feit.trim() && !d.dest && !d.stap.trim()){ showToast('Vul eerst iets in.'); return; }
+  const iso = todayISO();
+  STATE.log[iso] = STATE.log[iso] || [];
+  STATE.log[iso].push({ id:uid('log'), time:nowHHMM(), kind:'rrt', text:(d.feit.trim()||'—')+' → '+(d.dest||'—'), reason:d.stap.trim() });
+  if(d.dest==='Inplannen'){
+    const day = getDay(iso); const it = newItem('flex');
+    it.title = d.feit.trim() || d.stap.trim() || 'RRT-stap';
+    if(d.stap.trim() && d.feit.trim()) it.why = d.stap.trim();
+    if(d.tijd) it.time = d.tijd;
+    it.order = day.items.length; day.items.push(it);
+  }
+  const planned = d.dest==='Inplannen';
+  rrtDraft = { veilig:'', feit:'', stap:'', dest:'', tijd:'' };
+  saveState(); renderAll(); renderTerug('RRT');
+  showToast(planned ? 'Vastgelegd en ingepland.' : 'Vastgelegd in Capture the moment.');
+}
+
+/* =====================================================================
+   v1.5 — ROUTINE BEWERKEN
+   ===================================================================== */
+function renderRoutineModal(){
+  const R = STATE.routines;
+  $('#routineBody').innerHTML = `<div class="pickInfo">Pas aan welke routinepunten je per dagdeel ziet. Tik op "opt" om een punt optioneel te maken.</div>` +
+    ['ochtend','middag','avond'].map(k=>`<div class="dagdeelHead">${k}</div>
+      ${R[k].map(r=>`<div class="rtEdit"><span>${esc(r.titel)}</span><button class="optT ${r.optioneel?'on':''}" data-rtopt="${r.id}">opt</button><button data-rtdel="${r.id}" title="Verwijderen">×</button></div>`).join('')}
+      <div class="poolAdd" style="margin-top:4px"><input type="text" data-rtnew="${k}" placeholder="Nieuw punt (${k})…"><button data-rtadd="${k}">+</button></div>`).join('');
+}
+function findRoutine(id){ for(const k of ['ochtend','middag','avond']){ const i=STATE.routines[k].findIndex(r=>r.id===id); if(i>=0) return {k,i}; } return null; }
+
+/* =====================================================================
+   v1.5 — DAGBLUEPRINT: een dag bewaren als sjabloon en later laden
+   ===================================================================== */
+function blueprintCopy(it){
+  const c = JSON.parse(JSON.stringify(it));
+  ['id','done','skipped','carriedOver','recurring','recurringTemplateId','_view','_new','_motifEditing','_iconsAll','resultActual'].forEach(k=>delete c[k]);
+  (c.subtasks||[]).forEach(st=>st.done=false);
+  return c;
+}
+function renderBpModal(mode){
+  if(mode==='save'){
+    const n = peekDay(currentDate).items.length;
+    $('#bpBody').innerHTML = `<div class="pickInfo">Bewaar de ${pluralOnderdeel(n)} van ${esc(fmtDateShort(currentDate))} als blueprint, bv. "Kliniekdag".</div>
+      <div class="poolAdd"><input type="text" id="bpName" placeholder="Naam van de blueprint"><button id="btnBpDoSave" ${n?'':'disabled'}>Bewaren</button></div>`;
+  } else {
+    $('#bpBody').innerHTML = STATE.blueprints.length
+      ? `<div class="pickInfo">Laden voegt de onderdelen toe aan ${esc(fmtDateShort(currentDate))}. Er wordt niets vervangen.</div>` + STATE.blueprints.map(b=>`<div class="poolRow"><span>${esc(b.name)} <small style="color:var(--faint)">· ${pluralOnderdeel(b.items.length)}</small></span><button data-bpload="${b.id}" style="color:var(--accent);font-size:11px;font-weight:800">laden</button><button data-bpdel="${b.id}" title="Verwijderen" style="margin-left:6px">×</button></div>`).join('')
+      : `<div class="pickInfo">Nog geen blueprints. Bouw een dag en tik op "Bewaar als blueprint".</div>`;
+  }
+  openOverlay('bpModal');
+}
+
+/* =====================================================================
+   v1.5 — WIMPELS (zijbalk met favoriete modules)
+   ===================================================================== */
+function renderWimpels(){
+  $('#wimpels').innerHTML = CONFIG.wimpels.map((w,i)=>`<button class="wimpel" data-wimpel="${i}" title="${esc(w.code)} · ${esc(w.name)}">${esc(w.code)}</button>`).join('');
 }
 
 /* ---------- overlays ---------- */
@@ -1709,14 +2121,21 @@ function showToast(msg, onUndo){
    ===================================================================== */
 function renderAll(){
   $('#btnToday').textContent = fmtDateShort(currentDate) + (currentDate===todayISO()?' · vandaag':'');
-  renderLive(); renderFraming(); renderBuilderList(); renderCalendar(); renderPoints(); updateUndoBtn();
+  renderLive(); renderFraming(); renderBuilderExtras(); renderBuilderList(); renderCalendar(); renderPoints(); updateUndoBtn();
+}
+function clearNewFlags(){
+  const d = STATE.days[currentDate]; if(!d) return false;
+  let ch=false; d.items.forEach(it=>{ if(it._new){ delete it._new; ch=true; } });
+  if(ch) saveState(); return ch;
 }
 function setView(v){
+  if(clearNewFlags()) renderBuilderList();
   currentView = v;
   $all('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   $all('.view').forEach(s=>s.classList.toggle('active', s.id==='view-'+v));
   if(v==='live') renderLive();
   if(v==='calendar') renderCalendar();
+  if(v==='points') renderPoints();
 }
 
 /* =====================================================================
@@ -1724,8 +2143,10 @@ function setView(v){
    ===================================================================== */
 document.addEventListener('DOMContentLoaded', init);
 
+let timeDirty = false, wimpelLong = false;
 function init(){
   loadState();
+  renderWimpels();
   $all('.tab').forEach(t=> t.addEventListener('click', ()=> setView(t.dataset.view)));
 
   $('#btnPrevDay').addEventListener('click', ()=>{ currentDate = addDays(currentDate,-1); renderAll(); });
@@ -1777,7 +2198,8 @@ function init(){
     if(addBtn){
       const day = getDay(currentDate);
       const it = newItem(addBtn.dataset.add);
-      it.order = day.items.length; day.items.push(it); it._view = 'max';
+      day.items.forEach(x=>delete x._new);
+      it.order = day.items.length; day.items.push(it); it._view = 'max'; it._new = true;
       saveState(); renderAll();
       $('#addMenuPopup').classList.add('hidden');
     }
@@ -1850,8 +2272,13 @@ function init(){
       const card = timeInp.closest('.item'); if(!card) return;
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
       if(it.locked) return;
-      it.time = timeInp.value; saveState(); syncTemplate(it); renderAll();
+      // v1.5: niet meteen opnieuw tekenen (dan klapt de tijdkiezer dicht na
+      // de uren). Opslaan nu, opnieuw sorteren pas als de kiezer sluit.
+      it.time = timeInp.value; saveState(); syncTemplate(it); timeDirty = true;
     }
+  });
+  document.addEventListener('focusout', e=>{
+    if(e.target.matches && e.target.matches('input[type=time]') && timeDirty){ timeDirty=false; setTimeout(renderAll, 0); }
   });
 
   // tijd wijzigen rechtstreeks vanuit de Kalender-tijdlijn (flexibele punten)
@@ -1859,7 +2286,7 @@ function init(){
     const tt = e.target.closest('[data-tltime]');
     if(tt){
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===tt.dataset.tltime);
-      if(it && !it.locked){ it.time = tt.value; saveState(); syncTemplate(it); renderAll(); }
+      if(it && !it.locked){ it.time = tt.value; saveState(); syncTemplate(it); timeDirty = true; }
     }
   });
 
@@ -1880,7 +2307,7 @@ function init(){
     if(chk){
       const card = chk.closest('.item'); if(!card) return;
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===card.dataset.id); if(!it) return;
-      it.done = chk.checked;
+      it.done = chk.checked; it.skipped = false;
       if(it.done) onItemDone(it);
       saveState(); renderAll();
     }
@@ -1890,7 +2317,7 @@ function init(){
     const tl = e.target.closest('.tlCheck[data-tlid]');
     if(tl){
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===tl.dataset.tlid); if(!it) return;
-      it.done = tl.checked;
+      it.done = tl.checked; it.skipped = false;
       if(it.done) onItemDone(it);
       saveState(); renderAll();
     }
@@ -1901,9 +2328,17 @@ function init(){
     const d = e.target.closest('[data-donenow]');
     if(d){
       const day = getDay(currentDate); const it = day.items.find(x=>x.id===d.dataset.donenow); if(!it) return;
-      it.done = true; onItemDone(it);
-      saveState(); renderAll();
+      it.done = true; it.skipped = false; onItemDone(it);
+      saveState(); renderAll(); return;
     }
+    const sk = e.target.closest('[data-skipnow]');
+    if(sk){
+      const day = getDay(currentDate); const it = day.items.find(x=>x.id===sk.dataset.skipnow); if(!it) return;
+      it.skipped = true; it.done = false;
+      saveState(); renderAll(); showToast('Genoteerd als niet gedaan — geen probleem.');
+      return;
+    }
+    if(e.target.closest('#doneListToggle')){ doneListOpen=!doneListOpen; renderLive(); }
   });
 
   // reorder / toggles / expand / delete / addsub / savelib / lock
@@ -1922,6 +2357,9 @@ function init(){
     const reqToggle = e.target.closest('[data-toggle="required"]');
     if(reqToggle && card){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.required=!it.required; saveState(); renderAll(); return; }
 
+    const essT = e.target.closest('[data-toggle="ess"]');
+    if(essT && card){ const it=getDay(currentDate).items.find(x=>x.id===card.dataset.id); if(it.locked) return; it.ess=!it.ess; saveState(); syncTemplate(it); renderAll(); return; }
+
     const repBtn = e.target.closest('[data-openrepeat]');
     if(repBtn && card){ const it=getDay(currentDate).items.find(x=>x.id===card.dataset.id); if(it.locked) return; openRepeatModal(card.dataset.id); return; }
 
@@ -1930,6 +2368,7 @@ function init(){
       const day=getDay(currentDate); const it=day.items.find(x=>x.id===card.dataset.id);
       const cur = it._view || 'normal';
       it._view = (cur===win.dataset.win) ? 'normal' : win.dataset.win;
+      delete it._new;
       saveState(); renderAll(); return;
     }
 
@@ -2013,7 +2452,9 @@ function init(){
   });
   document.addEventListener('click', e=>{
     if(e.target.id==='btnExport'){
-      const blob = new Blob([JSON.stringify(STATE,null,2)], {type:'application/json'});
+      const out = Object.assign({ _app:'CR.4 Daybuilder', _versie:CONFIG.version, _geexporteerd:new Date().toISOString(),
+        _fotoInstructie:'Foto van een dagprogramma -> maak een cr4-dag JSON (zie de verborgen instructie bovenin index.html). Importeren via Instellingen -> Bestand toevoegen.' }, STATE);
+      const blob = new Blob([JSON.stringify(out,null,2)], {type:'application/json'});
       const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download = 'CR4-Daybuilder-backup-'+todayISO()+'.json';
       document.body.appendChild(a); a.click(); a.remove();
@@ -2041,8 +2482,8 @@ function init(){
     e.target.value='';
   });
   $('#importDayFile').addEventListener('change', e=>{
-    const file = e.target.files[0]; if(!file) return;
-    handleDagImportFile(file);
+    if(!e.target.files.length) return;
+    handleImportFiles(Array.from(e.target.files));
     e.target.value='';
   });
   document.addEventListener('click', e=>{
@@ -2056,8 +2497,6 @@ function init(){
 
   // punten essentials
   document.addEventListener('change', e=>{
-    const ess = e.target.closest('[data-ess]');
-    if(ess){ setEss(currentDate, ess.dataset.ess, ess.checked); saveState(); renderPoints(); renderCalendarPoints(); renderCtm(); }
     const pk = e.target.closest('[data-pick]');
     if(pk && pickDraft){
       const id = pk.dataset.pick;
@@ -2067,11 +2506,64 @@ function init(){
     }
   });
   document.addEventListener('click', e=>{
-    const ec = e.target.closest('[data-esscount]');
-    if(ec){
-      const id = ec.dataset.esscount; const raw = essVal(currentDate,id);
-      let n = typeof raw==='number' ? raw : (raw?2:0); n = (n+1)%3;
-      setEss(currentDate, id, n); saveState(); renderPoints(); renderCalendarPoints(); renderCtm(); return;
+    const th = e.target.closest('[data-trih]');
+    if(th){ const id=th.dataset.trih; setEss(currentDate, id, nextTri(essVal(currentDate,id))); saveState(); renderPoints(); renderCalendarPoints(); renderCtm(); return; }
+    const tr = e.target.closest('[data-trir]');
+    if(tr){ const id=tr.dataset.trir; STATE.routineChecked[currentDate]=STATE.routineChecked[currentDate]||{}; const nv=nextTri(rtVal(currentDate,id)); if(nv===undefined) delete STATE.routineChecked[currentDate][id]; else STATE.routineChecked[currentDate][id]=nv; saveState(); renderPoints(); renderCalendarPoints(); return; }
+    const hv = e.target.closest('[data-hrview]');
+    if(hv){ STATE.settings.hrView=hv.dataset.hrview; saveState(); renderPoints(); return; }
+    const gv = e.target.closest('[data-goview]');
+    if(gv){ setView(gv.dataset.goview); return; }
+    // routine bewerken
+    if(e.target.id==='btnEditRoutine'){ renderRoutineModal(); openOverlay('routineModal'); return; }
+    const ro = e.target.closest('[data-rtopt]');
+    if(ro){ const f=findRoutine(ro.dataset.rtopt); if(f){ const r=STATE.routines[f.k][f.i]; r.optioneel=!r.optioneel; saveState(); renderRoutineModal(); renderPoints(); } return; }
+    const rd = e.target.closest('[data-rtdel]');
+    if(rd){ const f=findRoutine(rd.dataset.rtdel); if(f){ STATE.routines[f.k].splice(f.i,1); saveState(); renderRoutineModal(); renderPoints(); } return; }
+    const ra = e.target.closest('[data-rtadd]');
+    if(ra){ const k=ra.dataset.rtadd; const inp=$('[data-rtnew="'+k+'"]'); const t=(inp.value||'').trim(); if(!t) return; STATE.routines[k].push({id:uid('rt'),titel:t,optioneel:false}); saveState(); renderRoutineModal(); renderPoints(); return; }
+    // dagblueprint
+    if(e.target.id==='btnBpSave'){ renderBpModal('save'); return; }
+    if(e.target.id==='btnBpLoad'){ renderBpModal('load'); return; }
+    if(e.target.id==='btnBpDoSave'){
+      const name = ($('#bpName').value||'').trim() || ('Blueprint '+(STATE.blueprints.length+1));
+      STATE.blueprints.push({ id:uid('bp'), name, items: peekDay(currentDate).items.map(blueprintCopy) });
+      saveState(); closeOverlay('bpModal'); renderBuilderExtras(); showToast('Blueprint "'+name+'" bewaard.'); return;
+    }
+    const bl = e.target.closest('[data-bpload]');
+    if(bl){
+      const bp = STATE.blueprints.find(b=>b.id===bl.dataset.bpload); if(!bp) return;
+      const day = getDay(currentDate);
+      bp.items.forEach(raw=>{ const it = Object.assign(newItem(raw.type||'flex'), JSON.parse(JSON.stringify(raw)), { id:uid('item'), done:false, skipped:false, order: day.items.length }); day.items.push(it); });
+      saveState(); closeOverlay('bpModal'); renderAll(); showToast(pluralOnderdeel(bp.items.length)+' geladen uit "'+bp.name+'".'); return;
+    }
+    const bd = e.target.closest('[data-bpdel]');
+    if(bd){ STATE.blueprints = STATE.blueprints.filter(b=>b.id!==bd.dataset.bpdel); saveState(); renderBpModal('load'); renderBuilderExtras(); return; }
+    // dagbrief
+    if(e.target.closest('#btnBrief')){ openBrief(); return; }
+    const bs = e.target.closest('[data-briefshift]');
+    if(bs && STATE.brieven){
+      const list = briefList(); const cur = briefForDate(todayISO()); let i = list.findIndex(b=>b.nr===cur.nr);
+      i = (i + (+bs.dataset.briefshift) + list.length) % list.length;
+      STATE.brieven.start = list[i].nr; STATE.brieven.startDate = todayISO(); saveState(); renderSettings(); return;
+    }
+    // RRT
+    const rdst = e.target.closest('[data-rrtdest]');
+    if(rdst){ rrtDraft.dest = rrtDraft.dest===rdst.dataset.rrtdest ? '' : rdst.dataset.rrtdest; renderTerug('RRT'); return; }
+    if(e.target.id==='btnRrtSave'){ saveRrt(); return; }
+    // nieuwste versie ophalen
+    if(e.target.id==='btnUpdate'){
+      if(navigator.onLine===false){ showToast('Geen verbinding — probeer het straks online.'); return; }
+      try{ navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); }catch(_){}
+      location.href = CONFIG.updateUrl + '?v=' + Date.now(); return;
+    }
+    // wimpels
+    const wp = e.target.closest('[data-wimpel]');
+    if(wp){
+      if(wimpelLong){ wimpelLong=false; return; }
+      const w = CONFIG.wimpels[+wp.dataset.wimpel];
+      if(w.url) location.href = w.url; else showToast(w.code+' · '+w.name+' — nog niet gekoppeld');
+      return;
     }
     if(e.target.id==='btnLockWeek' && pickDraft && pickDraft.ids.length===CONFIG.pointsPerWeek){
       STATE.weekSelections[pickDraft.wk] = pickDraft.ids.slice(); pickDraft=null; saveState(); renderAll(); showToast('Essentials vastgezet voor deze week.'); return;
@@ -2115,8 +2607,12 @@ function init(){
     const cr = e.target.closest('[data-closeresult]');
     if(cr){ const day=getDay(currentDate); const it=day.items.find(x=>x.id===cr.dataset.closeresult); if(it){ it.resultActual=cr.value; saveState(); } }
     if(e.target.id==='oneLinerInput'){ getDay(currentDate).closing.oneLiner=e.target.value; saveState(); }
+    if(e.target.id==='leerpuntInput'){ getDay(currentDate).closing.leerpunt=e.target.value; saveState(); }
+    const ri = e.target.closest('[data-rrt]'); if(ri){ rrtDraft[ri.dataset.rrt]=ri.value; }
+    if(e.target.id==='rrtTime'){ rrtDraft.tijd=e.target.value; }
   });
   document.addEventListener('change', e=>{
+    if(e.target.id==='rrtTime'){ rrtDraft.tijd=e.target.value; }
     if(e.target.id==='minDoelChk'){ getDay(currentDate).closing.minDoelMet=e.target.checked; saveState(); renderCalendar(); }
   });
   document.addEventListener('click', e=>{
@@ -2133,6 +2629,14 @@ function init(){
     if(e.target.id==='btnSaveLock'){ saveLockFromModal(); }
     if(e.target.id==='btnUnlock'){ unlockFromModal(); }
   });
+
+  // wimpel lang indrukken = naam tonen
+  let wimpelTimer=null;
+  document.addEventListener('pointerdown', e=>{
+    const wp = e.target.closest('[data-wimpel]'); if(!wp) return;
+    wimpelTimer = setTimeout(()=>{ const w=CONFIG.wimpels[+wp.dataset.wimpel]; wimpelLong=true; showToast(w.code+' · '+w.name); }, 500);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>document.addEventListener(ev, ()=>{ clearTimeout(wimpelTimer); }));
 
   // slepen om de tijd van een flexibel punt te wijzigen (muis + touch via Pointer Events)
   let dragState = null;
@@ -2319,27 +2823,51 @@ function itemFromDagJSON(raw){
   if(raw.duur!=null) it.duration = raw.duur;
   if(raw.locatie) it.location = raw.locatie;
   if(raw.motief) it.why = raw.motief;
+  it.ess = raw.spoor ? raw.spoor==='essentials' : guessEss(it.title, false);
   return it;
 }
-function handleDagImportFile(file){
-  const reader = new FileReader();
-  reader.onload = ()=>{
+/* v1.5: één knop voor alle bestanden — herkent het type zelf. */
+function readFileText(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsText(file); }); }
+async function handleImportFiles(files){
+  const msgs = [];
+  for(const file of files){
     let obj;
-    try{ obj = JSON.parse(reader.result); }
-    catch(e){ showToast('Kon bestand niet lezen — geen geldig JSON-bestand.'); return; }
-    const err = validateDagJSON(obj);
-    if(err){ showToast(err); return; }
-    const items = obj.items.map(itemFromDagJSON);
-    const existing = STATE.days[obj.datum];
-    if(existing && existing.items.length){
-      pendingDagImport = { datum: obj.datum, items };
-      openDagImportChoiceModal(obj.datum, items.length, existing.items.length);
+    try{ obj = JSON.parse(await readFileText(file)); }
+    catch(e){ msgs.push(file.name+': geen geldig JSON-bestand'); continue; }
+    const type = obj && obj.type;
+    if(type==='cr4-brieven'){
+      const list = (obj.brieven||[]).filter(b=>b && typeof b.nr==='number' && b.tekst);
+      if(!list.length){ msgs.push('Geen brieven gevonden'); continue; }
+      STATE.brieven = { list, start: obj.start || list[0].nr, startDate: todayISO() };
+      msgs.push(list.length+' dagbrieven · vandaag brief '+STATE.brieven.start);
+    } else if(type==='cr4-routines'){
+      const D = obj.dagdelen||{}; const out = { ochtend:[], middag:[], avond:[] };
+      ['ochtend','middag','avond'].forEach(k=>(D[k]||[]).forEach(r=>{ if(r && r.titel) out[k].push({ id:uid('rt'), titel:r.titel, optioneel:!!r.optioneel }); }));
+      STATE.routines = out;
+      msgs.push('Routine: '+allRoutines().length+' punten');
+    } else if(type==='cr4-cr1teksten'){
+      STATE.cr1Teksten = (obj.teksten||[]).filter(t=>typeof t==='string' && t.trim());
+      msgs.push(STATE.cr1Teksten.length+' CR.1-teksten');
+    } else if(type==='cr4-dag'){
+      const err = validateDagJSON(obj);
+      if(err){ msgs.push(err); continue; }
+      const items = obj.items.map(itemFromDagJSON);
+      const existing = STATE.days[obj.datum];
+      if(existing && existing.items.length){
+        saveState();
+        pendingDagImport = { datum: obj.datum, items };
+        openDagImportChoiceModal(obj.datum, items.length, existing.items.length);
+        if(msgs.length) showToast(msgs.join(' · '));
+        return; // keuze in het venster maakt het af
+      }
+      commitDagImport(obj.datum, items, 'add', true);
+      msgs.push(pluralOnderdeel(items.length)+' → '+fmtDateShort(obj.datum));
     } else {
-      commitDagImport(obj.datum, items, 'add');
+      msgs.push(file.name+': onbekend bestand');
     }
-  };
-  reader.onerror = ()=>{ showToast('Kon bestand niet lezen.'); };
-  reader.readAsText(file);
+  }
+  saveState(); renderAll();
+  if(msgs.length) showToast(msgs.join(' · '));
 }
 function openDagImportChoiceModal(datum, newCount, existingCount){
   $('#dagImportBody').innerHTML = `
@@ -2355,7 +2883,7 @@ function openDagImportChoiceModal(datum, newCount, existingCount){
   `;
   openOverlay('dagImportModal');
 }
-function commitDagImport(datum, items, mode){
+function commitDagImport(datum, items, mode, quiet){
   const day = getDay(datum);
   if(mode==='overwrite') day.items = [];
   const startOrder = day.items.length;
@@ -2364,7 +2892,7 @@ function commitDagImport(datum, items, mode){
   currentDate = datum;
   setView('calendar');
   renderAll();
-  showToast(pluralOnderdeel(items.length)+' toegevoegd aan '+fmtDateShort(datum)+'.');
+  if(!quiet) showToast(pluralOnderdeel(items.length)+' toegevoegd aan '+fmtDateShort(datum)+'.');
 }
 </script>
 </body>
